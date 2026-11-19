@@ -1,0 +1,14 @@
+{
+  "name": "facturapro-panama",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema local de facturación comercial para Panamá",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "migrate:sqlite": "node --experimental-sqlite --env-file-if-exists=.env migrate-sqlite.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
