@@ -1,29 +1,22 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createServer } from 'node:net';
 import { createServer as createHttpServer } from 'node:http';
 import { once } from 'node:events';
 
-let serverProcess;
 let supabaseMock;
+let vercelServer;
+let vercelHandler;
 let baseUrl;
 let cookie = '';
 let lastSetCookieHeader = '';
 const tables = {
     facturapro_admin: [],
     facturapro_settings: [],
-    facturapro_invoices: []
+    facturapro_invoices: [],
+    facturapro_sessions: []
 };
-
-async function findAvailablePort() {
-    const probe = createServer();
-    probe.listen(0, '127.0.0.1');
-    await once(probe, 'listening');
-    const { port } = probe.address();
-    await new Promise((resolve, reject) => probe.close(error => error ? reject(error) : resolve()));
-    return port;
-}
+const loginAttempts = new Map();
 
 function sendJson(response, status, data) {
     response.writeHead(status, { 'Content-Type': 'application/json' });
@@ -39,8 +32,9 @@ async function readBody(request) {
 function rowMatches(row, url) {
     return [...url.searchParams.entries()].every(([key, filter]) => {
         if (['select', 'order', 'limit', 'offset', 'on_conflict'].includes(key)) return true;
-        if (!filter.startsWith('eq.')) return false;
-        return String(row[key]) === filter.slice(3);
+        if (filter.startsWith('eq.')) return String(row[key]) === filter.slice(3);
+        if (filter.startsWith('lt.')) return String(row[key]) < filter.slice(3);
+        return false;
     });
 }
 
@@ -54,6 +48,30 @@ function startSupabaseMock() {
         try {
             assert.equal(request.headers.apikey, 'test-service-role-key');
             const url = new URL(request.url, 'http://localhost');
+            if (url.pathname.startsWith('/rest/v1/rpc/')) {
+                const procedure = url.pathname.split('/').pop();
+                const body = await readBody(request);
+                const attempt = loginAttempts.get(body.p_attempt_key);
+                if (procedure === 'facturapro_login_is_blocked') {
+                    return sendJson(response, 200, Boolean(attempt?.blockedUntil > Date.now()));
+                }
+                if (procedure === 'facturapro_login_failure') {
+                    const next = attempt || { failures: 0, windowStartedAt: Date.now() };
+                    if (Date.now() - next.windowStartedAt >= 15 * 60 * 1000) {
+                        next.failures = 0;
+                        next.windowStartedAt = Date.now();
+                    }
+                    next.failures++;
+                    if (next.failures >= 5) next.blockedUntil = Date.now() + 15 * 60 * 1000;
+                    loginAttempts.set(body.p_attempt_key, next);
+                    return sendJson(response, 200, null);
+                }
+                if (procedure === 'facturapro_login_success') {
+                    loginAttempts.delete(body.p_attempt_key);
+                    return sendJson(response, 200, null);
+                }
+                return sendJson(response, 404, { message: 'Unknown RPC' });
+            }
             const table = url.pathname.split('/').pop();
             const rows = tables[table];
             if (!rows) return sendJson(response, 404, { message: 'Unknown table' });
@@ -74,7 +92,8 @@ function startSupabaseMock() {
                 const inputRows = Array.isArray(body) ? body : [body];
                 for (const input of inputRows) {
                     const conflictKey = table === 'facturapro_admin' ? 'id'
-                        : table === 'facturapro_settings' ? 'key' : 'id';
+                        : table === 'facturapro_settings' ? 'key'
+                        : table === 'facturapro_sessions' ? 'token_hash' : 'id';
                     const index = rows.findIndex(row => row[conflictKey] === input[conflictKey]);
                     if (index >= 0) {
                         if (request.headers.prefer?.includes('ignore-duplicates')) continue;
@@ -131,36 +150,21 @@ async function api(path, { method = 'GET', body, expected = 200, headers = {} } 
 
 before(async () => {
     const supabasePort = await startSupabaseMock();
-    const port = await findAvailablePort();
-    baseUrl = `http://127.0.0.1:${port}`;
-    serverProcess = spawn(process.execPath, ['server.mjs'], {
-        cwd: process.cwd(),
-        env: {
-            ...process.env,
-            HOST: '127.0.0.1',
-            PORT: String(port),
-            SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
-            SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
-            FACTURAPRO_SETUP_TOKEN: 'test-initial-setup-token-000000000001'
-        },
-        stdio: 'ignore'
-    });
-    for (let attempt = 0; attempt < 50; attempt++) {
-        if (serverProcess.exitCode !== null) throw new Error(`Server exited with code ${serverProcess.exitCode}`);
-        try {
-            const response = await fetch(`${baseUrl}/api/auth/status`);
-            if (response.ok) return;
-        } catch {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-    }
-    throw new Error('Server did not become ready.');
+    process.env.HOST = '127.0.0.1';
+    process.env.SUPABASE_URL = `http://127.0.0.1:${supabasePort}`;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+    process.env.FACTURAPRO_SETUP_TOKEN = 'test-initial-setup-token-000000000001';
+    process.env.VERCEL = '1';
+    ({ default: vercelHandler } = await import('./api/[...path].mjs'));
+    vercelServer = createHttpServer(vercelHandler);
+    await new Promise(resolve => vercelServer.listen(0, '127.0.0.1', resolve));
+    baseUrl = `http://127.0.0.1:${vercelServer.address().port}`;
 });
 
 after(async () => {
-    if (serverProcess && serverProcess.exitCode === null) {
-        serverProcess.kill('SIGTERM');
-        await once(serverProcess, 'exit');
+    if (vercelServer?.listening) {
+        vercelServer.close();
+        await once(vercelServer, 'close');
     }
     if (supabaseMock?.listening) {
         supabaseMock.close();
@@ -175,12 +179,17 @@ test('server rejects a non-loopback listener', async () => {
             ...globalThis.process.env,
             HOST: '0.0.0.0',
             SUPABASE_URL: 'http://127.0.0.1:1',
-            SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key'
+            SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+            VERCEL: ''
         },
         stdio: 'ignore'
     });
     const [exitCode] = await once(process, 'exit');
     assert.notEqual(exitCode, 0);
+});
+
+test('Vercel catch-all exports a callable serverless handler', () => {
+    assert.equal(typeof vercelHandler, 'function');
 });
 
 test('admin authentication protects Supabase-backed invoice operations', async () => {

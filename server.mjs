@@ -1,8 +1,8 @@
 import { createServer } from 'node:http';
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scrypt = promisify(scryptCallback);
@@ -13,14 +13,14 @@ const port = Number(process.env.PORT || 3000);
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sessionDurationMs = 8 * 60 * 60 * 1000;
-const sessions = new Map();
-const loginAttempts = new Map();
 const configuredSetupToken = process.env.FACTURAPRO_SETUP_TOKEN;
 const setupToken = configuredSetupToken || randomBytes(32).toString('base64url');
-let setupTokenExpiresAt = 0;
+let setupTokenExpiresAt = process.env.VERCEL === '1' && configuredSetupToken
+    ? Number.POSITIVE_INFINITY
+    : 0;
 let setupTokenUsed = false;
 
-if (!['127.0.0.1', '::1', 'localhost'].includes(host)) {
+if (process.env.VERCEL !== '1' && !['127.0.0.1', '::1', 'localhost'].includes(host)) {
     throw new Error('FacturaPro es local y solo puede escuchar en localhost, 127.0.0.1 o ::1.');
 }
 if (configuredSetupToken && configuredSetupToken.length < 32) {
@@ -61,22 +61,28 @@ function readCookies(request) {
     }).filter(([key]) => key));
 }
 
-function getSession(request) {
+async function getSession(request) {
     const token = readCookies(request).facturapro_session;
-    if (!token) return null;
-    const expiresAt = sessions.get(token);
-    if (!expiresAt || expiresAt <= Date.now()) {
-        sessions.delete(token);
+    if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const rows = await supabaseRequest(
+        'facturapro_sessions',
+        `select=token_hash,expires_at&token_hash=eq.${tokenHash}&limit=1`
+    );
+    const session = rows[0];
+    if (!session) return null;
+    if (!Number.isFinite(Date.parse(session.expires_at)) || Date.parse(session.expires_at) <= Date.now()) {
+        await deleteSession(tokenHash);
         return null;
     }
-    return token;
+    return { tokenHash };
 }
 
 function isSecureRequest(request) {
     if (request.socket.encrypted) return true;
     const forwardedProtocol = request.headers['x-forwarded-proto']?.split(',')[0].trim().toLowerCase();
     const loopbackPeer = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress);
-    return forwardedProtocol === 'https' && loopbackPeer;
+    return forwardedProtocol === 'https' && (loopbackPeer || process.env.VERCEL === '1');
 }
 
 function sessionCookie(token, maxAge, secure) {
@@ -312,30 +318,72 @@ async function deleteInvoice(id) {
     return rows.length > 0;
 }
 
-function issueSession(request, response) {
+async function issueSession(request, response) {
     const token = randomBytes(32).toString('base64url');
-    sessions.set(token, Date.now() + sessionDurationMs);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + sessionDurationMs);
+    await supabaseRequest('facturapro_sessions', '', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: {
+            token_hash: createHash('sha256').update(token).digest('hex'),
+            expires_at: expiresAt.toISOString()
+        }
+    });
+    await supabaseRequest(
+        'facturapro_sessions',
+        `expires_at=lt.${encodeURIComponent(now.toISOString())}`,
+        { method: 'DELETE', prefer: 'return=minimal' }
+    );
     response.setHeader('Set-Cookie', sessionCookie(token, sessionDurationMs / 1000, isSecureRequest(request)));
 }
 
-function checkLoginRate(request, username) {
-    const key = `${request.socket.remoteAddress}:${username.toLowerCase()}`;
-    const record = loginAttempts.get(key);
-    if (record && record.blockedUntil > Date.now()) {
+async function deleteSession(tokenHash) {
+    await supabaseRequest(
+        'facturapro_sessions',
+        `token_hash=eq.${tokenHash}`,
+        { method: 'DELETE', prefer: 'return=minimal' }
+    );
+}
+
+function getLoginAttemptKey(username) {
+    return createHash('sha256').update(username.toLowerCase()).digest('hex');
+}
+
+async function checkLoginRate(attemptKey) {
+    const blocked = await supabaseRequest('rpc/facturapro_login_is_blocked', '', {
+        method: 'POST',
+        body: { p_attempt_key: attemptKey }
+    });
+    if (blocked === true) {
         const error = new Error('Demasiados intentos. Espera 15 minutos antes de volver a intentarlo.');
         error.status = 429;
         throw error;
     }
-    return key;
+}
+
+async function recordLoginFailure(attemptKey) {
+    await supabaseRequest('rpc/facturapro_login_failure', '', {
+        method: 'POST',
+        body: { p_attempt_key: attemptKey }
+    });
+}
+
+async function clearLoginFailures(attemptKey) {
+    await supabaseRequest('rpc/facturapro_login_success', '', {
+        method: 'POST',
+        body: { p_attempt_key: attemptKey }
+    });
 }
 
 async function handleApi(request, response, url) {
     const method = request.method;
     const path = url.pathname;
     if (method === 'GET' && path === '/api/auth/status') {
+        const [admin, session] = await Promise.all([getAdmin(), getSession(request)]);
         return jsonResponse(response, 200, {
-            setupRequired: !await getAdmin(),
-            authenticated: Boolean(getSession(request))
+            setupRequired: !admin,
+            authenticated: Boolean(session)
         });
     }
     if ((method === 'POST' && (path === '/api/auth/setup' || path === '/api/auth/login')) ||
@@ -371,14 +419,15 @@ async function handleApi(request, response, url) {
             body: { id: true, username, salt, password_hash: hash.toString('hex') }
         });
         setupTokenUsed = true;
-        issueSession(request, response);
+        await issueSession(request, response);
         return jsonResponse(response, 201, { authenticated: true });
     }
     if (method === 'POST' && path === '/api/auth/login') {
         const body = await readJson(request);
         const username = typeof body.username === 'string' ? body.username.trim() : '';
         const password = typeof body.password === 'string' ? body.password : '';
-        const attemptKey = checkLoginRate(request, username);
+        const attemptKey = getLoginAttemptKey(username);
+        await checkLoginRate(attemptKey);
         const admin = await getAdmin();
         if (!admin) return jsonResponse(response, 409, { error: 'Primero debes configurar la cuenta administradora.' });
         const candidate = await scrypt(password, admin.salt, 64);
@@ -386,25 +435,22 @@ async function handleApi(request, response, url) {
         const valid = username.toLowerCase() === admin.username.toLowerCase() &&
             candidate.length === expected.length && timingSafeEqual(candidate, expected);
         if (!valid) {
-            const attempt = loginAttempts.get(attemptKey) || { count: 0 };
-            attempt.count++;
-            if (attempt.count >= 5) attempt.blockedUntil = Date.now() + 15 * 60 * 1000;
-            loginAttempts.set(attemptKey, attempt);
+            await recordLoginFailure(attemptKey);
             return jsonResponse(response, 401, { error: 'Usuario o contraseña incorrectos.' });
         }
-        loginAttempts.delete(attemptKey);
-        issueSession(request, response);
+        await clearLoginFailures(attemptKey);
+        await issueSession(request, response);
         return jsonResponse(response, 200, { authenticated: true });
     }
     if (method === 'POST' && path === '/api/auth/logout') {
-        const token = getSession(request);
-        if (token) sessions.delete(token);
+        const session = await getSession(request);
+        if (session) await deleteSession(session.tokenHash);
         return jsonResponse(response, 200, { authenticated: false }, {
             'Set-Cookie': sessionCookie('', 0, isSecureRequest(request))
         });
     }
 
-    const session = getSession(request);
+    const session = await getSession(request);
     if (!session) return jsonResponse(response, 401, { error: 'Inicia sesión para continuar.' });
 
     if (method === 'GET' && path === '/api/bootstrap') {
@@ -466,7 +512,7 @@ async function handleApi(request, response, url) {
     return jsonResponse(response, 404, { error: 'Ruta no encontrada.' });
 }
 
-const server = createServer(async (request, response) => {
+export async function handleRequest(request, response) {
     try {
         const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
         if (url.pathname.startsWith('/api/')) {
@@ -496,12 +542,19 @@ const server = createServer(async (request, response) => {
             error: error.status ? error.message : 'Error interno del servidor.'
         });
     }
-});
+}
 
+let server;
 async function startServer() {
     await supabaseRequest('facturapro_admin', 'select=id&limit=1');
+    await supabaseRequest('facturapro_sessions', 'select=token_hash&limit=1');
+    await supabaseRequest('rpc/facturapro_login_is_blocked', '', {
+        method: 'POST',
+        body: { p_attempt_key: '0'.repeat(64) }
+    });
     const admin = await getAdmin();
     if (!admin) setupTokenExpiresAt = Date.now() + 15 * 60 * 1000;
+    server = createServer(handleRequest);
     server.listen(port, host, () => {
         console.log(`FacturaPro listo en http://${host}:${port}`);
         console.log('Base de datos: Supabase Postgres');
@@ -512,15 +565,17 @@ async function startServer() {
 }
 
 function closeServer() {
+    if (!server) return process.exit(0);
     server.close(() => {
         process.exit(0);
     });
 }
 
-process.on('SIGINT', closeServer);
-process.on('SIGTERM', closeServer);
-
-startServer().catch(error => {
-    console.error(`No se pudo iniciar FacturaPro: ${error.message}`);
-    process.exitCode = 1;
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+    process.on('SIGINT', closeServer);
+    process.on('SIGTERM', closeServer);
+    startServer().catch(error => {
+        console.error(`No se pudo iniciar FacturaPro: ${error.message}`);
+        process.exitCode = 1;
+    });
+}

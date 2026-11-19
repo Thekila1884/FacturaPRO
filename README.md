@@ -21,3 +21,12 @@ El servidor verifica la conexión y las tablas de Supabase antes de iniciar. Sol
 El inicio de sesión permanece en el backend: las contraseñas se derivan con scrypt y las sesiones usan cookies HttpOnly/SameSite, con `Secure` si la conexión es HTTPS. Las tablas tienen RLS habilitado y solo el backend, con la clave secreta, tiene acceso.
 
 La importación desde `localStorage` de la versión anterior sigue disponible al iniciar sesión. Ejecuta `npm test` para probar autenticación, facturas y persistencia usando un servicio Supabase simulado.
+
+## Desplegar en Vercel
+
+1. En Vercel, importa `Thekila1884/FacturaPRO` desde GitHub y usa la rama `main`.
+2. En **Settings → Environment Variables**, agrega `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` para Production (y Preview si lo necesitas). No subas `.env` a GitHub.
+3. Vuelve a ejecutar el contenido actualizado de [`supabase/schema.sql`](./supabase/schema.sql) en el SQL Editor de Supabase; agrega las tablas de sesiones y los procedimientos de limitación de intentos.
+4. Despliega. `vercel.json` publica el HTML en `/` y `api/[...path].mjs` enruta las llamadas del backend.
+
+Las sesiones y el bloqueo de intentos se guardan en Supabase para que funcionen entre instancias serverless. Como la cuenta administradora ya fue migrada, la configuración inicial no debería aparecer. Si despliegas sin una cuenta existente, configura `FACTURAPRO_SETUP_TOKEN` como variable de entorno de Vercel (mínimo 32 caracteres) antes de crearla.
