@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer as createHttpServer } from 'node:http';
 import { once } from 'node:events';
+import { readFile } from 'node:fs/promises';
 
 let supabaseMock;
 let vercelServer;
@@ -204,6 +205,15 @@ test('serves the compiled Tailwind stylesheet without the CDN runtime', async ()
     assert.doesNotMatch(html, /cdn\.tailwindcss\.com/);
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get('content-type'), /text\/css/);
+    assert.match(css, /\.hidden\s*\{\s*display:\s*none/);
+});
+
+test('build creates the Vercel public output directory with app assets', async () => {
+    const [html, css] = await Promise.all([
+        readFile('public/sistema_de_facturaci_n_comercial_panam_usd_itbms.html', 'utf8'),
+        readFile('public/tailwind.css', 'utf8')
+    ]);
+    assert.match(html, /href="\/tailwind\.css"/);
     assert.match(css, /\.hidden\s*\{\s*display:\s*none/);
 });
 
