@@ -42,7 +42,8 @@ const defaultIssuer = {
     dv: '52',
     phone: '+507 6234-5678',
     email: 'facturacion@istmoservicios.com.pa',
-    address: 'Ciudad de Panamá, Ave. Balboa, Torre Financial, Of. 802'
+    address: 'Ciudad de Panamá, Ave. Balboa, Torre Financial, Of. 802',
+    achDetails: ''
 };
 
 function jsonResponse(response, status, data, headers = {}) {

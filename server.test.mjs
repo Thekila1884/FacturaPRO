@@ -253,6 +253,13 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     assert.match(lastSetCookieHeader, /;\s*Secure(?:;|$)/);
     assert.deepEqual((await api('/api/bootstrap')).invoices, []);
 
+    const issuer = await api('/api/settings/issuer', {
+        method: 'PUT',
+        body: { name: 'Empresa de prueba', achDetails: 'Banco y cuenta ACH de prueba' }
+    });
+    assert.equal(issuer.issuer.achDetails, 'Banco y cuenta ACH de prueba');
+    assert.equal((await api('/api/bootstrap')).issuer.achDetails, 'Banco y cuenta ACH de prueba');
+
     const invoice = {
         id: 'test-invoice',
         number: 'FAC-0001',

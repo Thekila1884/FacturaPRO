@@ -22,6 +22,8 @@ El inicio de sesión permanece en el backend: las contraseñas se derivan con sc
 
 La importación desde `localStorage` de la versión anterior sigue disponible al iniciar sesión. Ejecuta `npm test` para probar autenticación, facturas y persistencia usando un servicio Supabase simulado.
 
+En **Datos del Emisor** puedes guardar las instrucciones de pago ACH. Se conservan en Supabase y aparecen en la factura impresa cuando el método de pago seleccionado es **Transferencia Bancaria (ACH)**.
+
 ## Inicio automático en Linux
 
 El servicio de usuario de systemd en `deploy/systemd/facturapro.service` inicia FacturaPro al comenzar tu sesión. Instálalo y actívalo con:
