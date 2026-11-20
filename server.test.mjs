@@ -156,7 +156,7 @@ before(async () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
     process.env.FACTURAPRO_SETUP_TOKEN = 'test-initial-setup-token-000000000001';
     process.env.VERCEL = '1';
-    ({ default: vercelHandler } = await import('./api/[...path].mjs'));
+    ({ default: vercelHandler } = await import('./api/index.mjs'));
     vercelServer = createHttpServer(vercelHandler);
     await new Promise(resolve => vercelServer.listen(0, '127.0.0.1', resolve));
     baseUrl = `http://127.0.0.1:${vercelServer.address().port}`;
@@ -189,8 +189,13 @@ test('server rejects a non-loopback listener', async () => {
     assert.notEqual(exitCode, 0);
 });
 
-test('Vercel catch-all exports a callable serverless handler', () => {
+test('Vercel API function exports a callable handler', () => {
     assert.equal(typeof vercelHandler, 'function');
+});
+
+test('dispatches Vercel API rewrites to the requested backend path', async () => {
+    const status = await api('/api?path=auth%2Fstatus');
+    assert.deepEqual(status, { setupRequired: true, authenticated: false });
 });
 
 test('serves the compiled Tailwind stylesheet without the CDN runtime', async () => {

@@ -40,6 +40,6 @@ Consulta el estado con `systemctl --user status facturapro.service` y los regist
 1. En Vercel, importa `Thekila1884/FacturaPRO` desde GitHub y usa la rama `main`.
 2. En **Settings → Environment Variables**, agrega `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` para Production (y Preview si lo necesitas). No subas `.env` a GitHub.
 3. Vuelve a ejecutar el contenido actualizado de [`supabase/schema.sql`](./supabase/schema.sql) en el SQL Editor de Supabase; agrega las tablas de sesiones y los procedimientos de limitación de intentos.
-4. Despliega. El comando `npm run build` compila Tailwind y prepara `public/` como carpeta de salida; `vercel.json` la declara y publica el HTML en `/`, mientras `api/[...path].mjs` enruta las llamadas del backend.
+4. Despliega. El comando `npm run build` compila Tailwind y prepara `public/` como carpeta de salida; `vercel.json` la declara, publica el HTML en `/` y reescribe `/api/*` a la función `api/index.mjs`.
 
 Las sesiones y el bloqueo de intentos se guardan en Supabase para que funcionen entre instancias serverless. Como la cuenta administradora ya fue migrada, la configuración inicial no debería aparecer. Si despliegas sin una cuenta existente, configura `FACTURAPRO_SETUP_TOKEN` como variable de entorno de Vercel (mínimo 32 caracteres) antes de crearla.
