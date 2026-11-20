@@ -192,6 +192,21 @@ test('Vercel catch-all exports a callable serverless handler', () => {
     assert.equal(typeof vercelHandler, 'function');
 });
 
+test('serves the compiled Tailwind stylesheet without the CDN runtime', async () => {
+    const [htmlResponse, cssResponse] = await Promise.all([
+        fetch(baseUrl),
+        fetch(`${baseUrl}/tailwind.css`)
+    ]);
+    const html = await htmlResponse.text();
+    const css = await cssResponse.text();
+    assert.equal(htmlResponse.status, 200);
+    assert.match(html, /href="\/tailwind\.css"/);
+    assert.doesNotMatch(html, /cdn\.tailwindcss\.com/);
+    assert.equal(cssResponse.status, 200);
+    assert.match(cssResponse.headers.get('content-type'), /text\/css/);
+    assert.match(css, /\.hidden\s*\{\s*display:\s*none/);
+});
+
 test('admin authentication protects Supabase-backed invoice operations', async () => {
     assert.deepEqual(await api('/api/auth/status'), { setupRequired: true, authenticated: false });
     await api('/api/bootstrap', { expected: 401 });

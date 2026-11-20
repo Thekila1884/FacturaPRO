@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const scrypt = promisify(scryptCallback);
 const root = dirname(fileURLToPath(import.meta.url));
 const htmlPath = join(root, 'sistema_de_facturaci_n_comercial_panam_usd_itbms.html');
+const cssPath = join(root, 'tailwind.css');
 const host = process.env.HOST || '127.0.0.1';
 const port = Number(process.env.PORT || 3000);
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
@@ -529,6 +530,16 @@ export async function handleRequest(request, response) {
                 'Referrer-Policy': 'same-origin'
             });
             response.end(request.method === 'HEAD' ? undefined : html);
+            return;
+        }
+        if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname === '/tailwind.css') {
+            const css = readFileSync(cssPath);
+            response.writeHead(200, {
+                'Content-Type': 'text/css; charset=utf-8',
+                'Cache-Control': 'no-cache',
+                'X-Content-Type-Options': 'nosniff'
+            });
+            response.end(request.method === 'HEAD' ? undefined : css);
             return;
         }
         jsonResponse(response, 404, { error: 'Recurso no encontrado.' });

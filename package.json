@@ -4,11 +4,15 @@
   "private": true,
   "description": "Sistema local de facturación comercial para Panamá",
   "scripts": {
-    "start": "node --env-file-if-exists=.env server.mjs",
+    "start": "npm run build && node --env-file-if-exists=.env server.mjs",
+    "build": "tailwindcss -i ./styles/tailwind.css -o ./tailwind.css --minify",
     "migrate:sqlite": "node --experimental-sqlite --env-file-if-exists=.env migrate-sqlite.mjs",
-    "test": "node --test"
+    "test": "npm run build && node --test"
   },
   "engines": {
     "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
   }
 }

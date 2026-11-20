@@ -1,0 +1,16 @@
+[Unit]
+Description=FacturaPro local backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documentos/facturacionLocal
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+
+[Install]
+WantedBy=default.target
