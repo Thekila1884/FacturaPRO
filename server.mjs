@@ -92,9 +92,9 @@ async function getSession(request) {
 }
 
 function isSecureRequest(request) {
-    if (request.socket.encrypted) return true;
+    if (request.socket?.encrypted) return true;
     const forwardedProtocol = request.headers['x-forwarded-proto']?.split(',')[0].trim().toLowerCase();
-    const loopbackPeer = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress);
+    const loopbackPeer = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket?.remoteAddress);
     return forwardedProtocol === 'https' && (loopbackPeer || process.env.VERCEL === '1');
 }
 

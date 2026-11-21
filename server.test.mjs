@@ -8,6 +8,7 @@ import { readFile } from 'node:fs/promises';
 let supabaseMock;
 let vercelServer;
 let vercelHandler;
+let applicationHandler;
 let baseUrl;
 let cookie = '';
 let lastSetCookieHeader = '';
@@ -157,6 +158,7 @@ before(async () => {
     process.env.FACTURAPRO_SETUP_TOKEN = 'test-initial-setup-token-000000000001';
     process.env.VERCEL = '1';
     ({ default: vercelHandler } = await import('./api/index.mjs'));
+    ({ handleRequest: applicationHandler } = await import('./server.mjs'));
     vercelServer = createHttpServer(vercelHandler);
     await new Promise(resolve => vercelServer.listen(0, '127.0.0.1', resolve));
     baseUrl = `http://127.0.0.1:${vercelServer.address().port}`;
@@ -252,6 +254,39 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     });
     assert.match(lastSetCookieHeader, /;\s*Secure(?:;|$)/);
     assert.deepEqual((await api('/api/bootstrap')).invoices, []);
+
+    const serverlessRequest = {
+        method: 'POST',
+        url: '/api/auth/login',
+        headers: {
+            host: 'facturapro.test',
+            origin: 'https://facturapro.test',
+            'x-forwarded-proto': 'https'
+        },
+        socket: null,
+        async *[Symbol.asyncIterator]() {
+            yield Buffer.from(JSON.stringify({
+                username: 'admin',
+                password: 'Correct-Horse-Battery-1'
+            }));
+        }
+    };
+    const serverlessResponse = {
+        headers: {},
+        writeHead(status, headers) {
+            this.statusCode = status;
+            Object.assign(this.headers, headers);
+        },
+        setHeader(name, value) {
+            this.headers[name] = value;
+        },
+        end(body) {
+            this.body = body;
+        }
+    };
+    await applicationHandler(serverlessRequest, serverlessResponse);
+    assert.equal(serverlessResponse.statusCode, 200);
+    assert.match(serverlessResponse.headers['Set-Cookie'], /;\s*Secure(?:;|$)/);
 
     const issuer = await api('/api/settings/issuer', {
         method: 'PUT',
