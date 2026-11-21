@@ -258,7 +258,26 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         body: { name: 'Empresa de prueba', achDetails: 'Banco y cuenta ACH de prueba' }
     });
     assert.equal(issuer.issuer.achDetails, 'Banco y cuenta ACH de prueba');
-    assert.equal((await api('/api/bootstrap')).issuer.achDetails, 'Banco y cuenta ACH de prueba');
+    assert.equal(issuer.issuer.paymentDetails['Transferencia Bancaria (ACH)'], 'Banco y cuenta ACH de prueba');
+
+    const paymentDetails = {
+        'Transferencia Bancaria (ACH)': 'Cuenta ACH actualizada',
+        'Yappy Comercial': 'Yappy de prueba'
+    };
+    const updatedIssuer = await api('/api/settings/issuer', {
+        method: 'PUT',
+        body: { name: 'Empresa de prueba', paymentDetails }
+    });
+    assert.equal(updatedIssuer.issuer.paymentDetails['Transferencia Bancaria (ACH)'], 'Cuenta ACH actualizada');
+    assert.equal(updatedIssuer.issuer.paymentDetails['Yappy Comercial'], 'Yappy de prueba');
+    await api('/api/settings/issuer', {
+        method: 'PUT',
+        body: { paymentDetails: { 'Yappy Comercial': 'x'.repeat(501) } },
+        expected: 400
+    });
+    const bootstrappedIssuer = (await api('/api/bootstrap')).issuer;
+    assert.equal(bootstrappedIssuer.achDetails, 'Cuenta ACH actualizada');
+    assert.equal(bootstrappedIssuer.paymentDetails['Yappy Comercial'], 'Yappy de prueba');
 
     const invoice = {
         id: 'test-invoice',

@@ -167,7 +167,7 @@
                 min-height: 0 !important;
                 padding: 0.1in !important;
             }
-            #invoice-totals #prev-ach-payment {
+            #invoice-totals #prev-method-payment {
                 padding: 0.1in !important;
             }
             #invoice-totals #prev-grand-total {
@@ -181,6 +181,9 @@
                 page-break-inside: avoid;
             }
             #history-view {
+                display: none !important;
+            }
+            #home-view {
                 display: none !important;
             }
         }
@@ -247,7 +250,11 @@
 
                 <!-- Navegación entre Módulos -->
                 <nav class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/70">
-                    <button id="tab-btn-editor" onclick="switchTab('editor')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm">
+                    <button id="tab-btn-home" onclick="switchTab('home')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm">
+                        <i data-lucide="house" class="w-4 h-4"></i>
+                        <span>Inicio</span>
+                    </button>
+                    <button id="tab-btn-editor" onclick="switchTab('editor')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="file-edit" class="w-4 h-4"></i>
                         <span>Generador y Ajustes</span>
                     </button>
@@ -255,6 +262,10 @@
                         <i data-lucide="folder-kanban" class="w-4 h-4"></i>
                         <span>Historial y Facturas</span>
                         <span id="history-count-badge" class="ml-1 bg-slate-700 text-slate-200 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </button>
+                    <button id="tab-btn-payments" onclick="switchTab('payments')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                        <i data-lucide="credit-card" class="w-4 h-4"></i>
+                        <span>Pagos</span>
                     </button>
                 </nav>
 
@@ -264,11 +275,11 @@
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                         <span class="hidden md:inline">Salir</span>
                     </button>
-                    <button onclick="createNewInvoice()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors" title="Limpiar formulario para nueva factura">
+                    <button onclick="switchTab('editor'); createNewInvoice()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors" title="Limpiar formulario para nueva factura">
                         <i data-lucide="file-plus-2" class="w-4 h-4 text-emerald-400"></i>
                         <span class="hidden md:inline">Nueva Factura</span>
                     </button>
-                    <button onclick="window.print()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors">
+                    <button id="header-print-button" onclick="window.print()" class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors">
                         <i data-lucide="printer" class="w-4 h-4"></i>
                         <span>Imprimir / PDF</span>
                     </button>
@@ -279,6 +290,107 @@
 
     <!-- CONTENEDOR PRINCIPAL -->
     <main id="main-workspace" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <section id="home-view" class="space-y-8">
+            <div class="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-7 text-white shadow-lg sm:p-10">
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">Panel principal</p>
+                <h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Bienvenido a FacturaPro</h1>
+                <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">Selecciona el módulo que necesitas para continuar con tu trabajo.</p>
+                <p class="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-slate-200">
+                    <i data-lucide="files" class="h-4 w-4 text-emerald-300"></i>
+                    <span><span id="home-invoice-count">0</span> facturas en el historial</span>
+                </p>
+            </div>
+
+            <div>
+                <h2 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500">Módulos disponibles</h2>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <button type="button" onclick="switchTab('editor'); createNewInvoice()" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md">
+                        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-600 group-hover:text-white">
+                            <i data-lucide="file-plus-2" class="h-6 w-6"></i>
+                        </span>
+                        <span class="block text-lg font-bold text-slate-900">Facturación</span>
+                        <span class="mt-2 block text-sm leading-relaxed text-slate-500">Crear una factura, agregar servicios y calcular el ITBMS.</span>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+                    </button>
+
+                    <button type="button" onclick="switchTab('history')" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md">
+                        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-blue-600 group-hover:text-white">
+                            <i data-lucide="folder-kanban" class="h-6 w-6"></i>
+                        </span>
+                        <span class="block text-lg font-bold text-slate-900">Historial de facturas</span>
+                        <span class="mt-2 block text-sm leading-relaxed text-slate-500">Consultar, ajustar, duplicar e imprimir facturas guardadas.</span>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+                    </button>
+
+                    <button type="button" onclick="switchTab('payments')" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md">
+                        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-700 transition group-hover:bg-violet-600 group-hover:text-white">
+                            <i data-lucide="credit-card" class="h-6 w-6"></i>
+                        </span>
+                        <span class="block text-lg font-bold text-slate-900">Configuración de pagos</span>
+                        <span class="mt-2 block text-sm leading-relaxed text-slate-500">Guardar instrucciones para ACH, Yappy, efectivo, tarjetas y crédito.</span>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-violet-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="payments-view" class="hidden space-y-6">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <div class="flex items-start gap-4">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                        <i data-lucide="credit-card" class="h-6 w-6"></i>
+                    </span>
+                    <div>
+                        <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Configuración de pagos</h1>
+                        <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Configura los datos e instrucciones de cada método. Al elegir un método en la factura, su información se agregará automáticamente al documento final.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <label for="payment-details-contado" class="block text-sm font-bold text-slate-800">Contado</label>
+                    <p class="mt-1 text-xs text-slate-500">Instrucciones para pagos de contado.</p>
+                    <textarea id="payment-details-contado" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Ej. Pago al momento de recibir el servicio." class="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <label for="payment-details-ach" class="block text-sm font-bold text-slate-800">Transferencia Bancaria (ACH)</label>
+                    <p class="mt-1 text-xs text-slate-500">Banco, cuenta y titular.</p>
+                    <textarea id="payment-details-ach" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Banco, tipo y número de cuenta, titular e instrucciones." class="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <label for="payment-details-yappy" class="block text-sm font-bold text-slate-800">Yappy Comercial</label>
+                    <p class="mt-1 text-xs text-slate-500">Número o identificador para recibir el pago.</p>
+                    <textarea id="payment-details-yappy" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Número Yappy o nombre comercial asociado." class="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <label for="payment-details-efectivo" class="block text-sm font-bold text-slate-800">Efectivo</label>
+                    <p class="mt-1 text-xs text-slate-500">Lugar o instrucciones para pagar en efectivo.</p>
+                    <textarea id="payment-details-efectivo" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Indica dónde y cómo realizar el pago." class="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <label for="payment-details-tarjeta" class="block text-sm font-bold text-slate-800">Tarjeta de Crédito / Débito</label>
+                    <p class="mt-1 text-xs text-slate-500">Tarjetas aceptadas o instrucciones de pago.</p>
+                    <textarea id="payment-details-tarjeta" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Indica las tarjetas aceptadas o el enlace de pago." class="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <label for="payment-details-credito-15" class="block text-sm font-bold text-slate-800">Crédito 15 días</label>
+                    <p class="mt-1 text-xs text-slate-500">Condiciones o instrucciones de pago a 15 días.</p>
+                    <textarea id="payment-details-credito-15" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Agrega condiciones adicionales para crédito a 15 días." class="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <label for="payment-details-credito-30" class="block text-sm font-bold text-slate-800">Crédito 30 días</label>
+                    <p class="mt-1 text-xs text-slate-500">Condiciones o instrucciones de pago a 30 días.</p>
+                    <textarea id="payment-details-credito-30" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Agrega condiciones adicionales para crédito a 30 días." class="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                </div>
+            </div>
+
+            <p class="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800">
+                <i data-lucide="check-circle-2" class="h-4 w-4 shrink-0"></i>
+                Los cambios se guardan automáticamente en la configuración de tu cuenta.
+            </p>
+        </section>
 
         <!-- =================================================================== -->
         <!-- MÓDULO 1: GENERADOR, AJUSTES Y VISTA PREVIA EN TIEMPO REAL          -->
@@ -405,11 +517,6 @@
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">Dirección Física</label>
                                 <input type="text" id="issuer-address" oninput="saveIssuerAndPreview()" placeholder="Ciudad de Panamá, Calle 50, Edificio Global Plaza, Piso 10" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
                             </div>
-                            <div class="sm:col-span-3">
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Datos para pagos por ACH</label>
-                                <textarea id="issuer-ach-details" rows="3" maxlength="500" oninput="saveIssuerAndPreview()" placeholder="Banco, tipo y número de cuenta, titular y cualquier instrucción para el pago." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
-                                <p class="mt-1 text-[11px] text-slate-500">Se guardan para futuras facturas y solo aparecen al seleccionar Transferencia Bancaria (ACH).</p>
-                            </div>
                         </div>
                         <p class="text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
                             <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
@@ -518,8 +625,8 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Notas, Términos o Datos Bancarios (ACH / Yappy)</label>
-                        <textarea id="inv-notes" rows="3" oninput="updatePreview()" placeholder="Ej. Realizar transferencia ACH a Banco General, Cuenta Corriente #03-01-01-000000-0 a nombre de la empresa. Yappy disponible al 6000-0000." class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Notas adicionales / Términos</label>
+                        <textarea id="inv-notes" rows="3" oninput="updatePreview()" placeholder="Ej. Gracias por su preferencia. Agrega aquí cualquier nota adicional para el cliente." class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"></textarea>
                     </div>
                 </section>
 
@@ -634,9 +741,9 @@
                         <div class="flex-1 text-xs">
                             <p class="font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-1">Notas y Condiciones de Pago</p>
                             <p id="prev-notes" class="text-slate-500 whitespace-pre-line leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 min-h-[60px]">Gracias por su preferencia.</p>
-                            <div id="prev-ach-payment" class="hidden mt-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
-                                <p class="mb-1 font-bold text-emerald-800">Datos para pago ACH</p>
-                                <p id="prev-ach-details" class="whitespace-pre-line text-slate-700"></p>
+                            <div id="prev-method-payment" class="hidden mt-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                                <p id="prev-method-payment-title" class="mb-1 font-bold text-emerald-800"></p>
+                                <p id="prev-method-payment-details" class="whitespace-pre-line text-slate-700"></p>
                             </div>
                         </div>
 
@@ -808,6 +915,17 @@
             INVOICES: 'facturapro_pa_invoices_v1',
             COUNTER: 'facturapro_pa_counter_v1'
         };
+        const ACH_PAYMENT_METHOD = 'Transferencia Bancaria (ACH)';
+        const PAYMENT_METHODS = [
+            { value: 'Contado', fieldId: 'payment-details-contado' },
+            { value: ACH_PAYMENT_METHOD, fieldId: 'payment-details-ach' },
+            { value: 'Yappy Comercial', fieldId: 'payment-details-yappy' },
+            { value: 'Efectivo', fieldId: 'payment-details-efectivo' },
+            { value: 'Tarjeta de Crédito / Débito', fieldId: 'payment-details-tarjeta' },
+            { value: 'Crédito 15 días', fieldId: 'payment-details-credito-15' },
+            { value: 'Crédito 30 días', fieldId: 'payment-details-credito-30' }
+        ];
+        const DEFAULT_PAYMENT_DETAILS = Object.fromEntries(PAYMENT_METHODS.map(({ value }) => [value, '']));
 
         let currentEditingId = null; // null = factura nueva, string = ID de factura guardada en edición
         let invoiceItems = [];       // Lista de ítems actuales en el formulario
@@ -957,6 +1075,7 @@
             updatePreview();
             renderHistoryTable();
             lucide.createIcons();
+            switchTab('home');
         }
 
         // =========================================================================
@@ -1009,9 +1128,17 @@
                 phone: '+507 6234-5678',
                 email: 'facturacion@istmoservicios.com.pa',
                 address: 'Ciudad de Panamá, Ave. Balboa, Torre Financial, Of. 802',
-                achDetails: ''
+                achDetails: '',
+                paymentDetails: DEFAULT_PAYMENT_DETAILS
             };
             data = { ...defaults, ...data };
+            const paymentDetails = {
+                ...DEFAULT_PAYMENT_DETAILS,
+                ...(data.paymentDetails && typeof data.paymentDetails === 'object' && !Array.isArray(data.paymentDetails)
+                    ? data.paymentDetails
+                    : {})
+            };
+            paymentDetails[ACH_PAYMENT_METHOD] ||= data.achDetails || '';
 
             document.getElementById('issuer-name').value = data.name;
             document.getElementById('issuer-ruc').value = data.ruc;
@@ -1019,12 +1146,22 @@
             document.getElementById('issuer-phone').value = data.phone;
             document.getElementById('issuer-email').value = data.email;
             document.getElementById('issuer-address').value = data.address;
-            document.getElementById('issuer-ach-details').value = data.achDetails;
+            PAYMENT_METHODS.forEach(({ value, fieldId }) => {
+                document.getElementById(fieldId).value = paymentDetails[value] || '';
+            });
 
             updateIssuerSubtitle();
         }
 
+        function getPaymentDetailsFromForm() {
+            return Object.fromEntries(PAYMENT_METHODS.map(({ value, fieldId }) => [
+                value,
+                document.getElementById(fieldId).value.trim()
+            ]));
+        }
+
         function saveIssuerAndPreview() {
+            const paymentDetails = getPaymentDetailsFromForm();
             const issuerData = {
                 name: document.getElementById('issuer-name').value.trim(),
                 ruc: document.getElementById('issuer-ruc').value.trim(),
@@ -1032,7 +1169,8 @@
                 phone: document.getElementById('issuer-phone').value.trim(),
                 email: document.getElementById('issuer-email').value.trim(),
                 address: document.getElementById('issuer-address').value.trim(),
-                achDetails: document.getElementById('issuer-ach-details').value.trim()
+                achDetails: paymentDetails[ACH_PAYMENT_METHOD],
+                paymentDetails
             };
             clearTimeout(issuerSaveTimer);
             issuerSaveTimer = setTimeout(async () => {
@@ -1260,11 +1398,12 @@
             document.getElementById('prev-inv-date').textContent = formatDateReadable(invDate);
             document.getElementById('prev-inv-due-date').textContent = formatDateReadable(invDueDate);
             document.getElementById('prev-inv-payment').textContent = invPayment;
-            const achDetails = document.getElementById('issuer-ach-details').value.trim();
-            document.getElementById('prev-ach-details').textContent = achDetails;
-            document.getElementById('prev-ach-payment').classList.toggle(
+            const paymentInstructions = getPaymentDetailsFromForm()[invPayment];
+            document.getElementById('prev-method-payment-title').textContent = `Instrucciones para ${invPayment}`;
+            document.getElementById('prev-method-payment-details').textContent = paymentInstructions;
+            document.getElementById('prev-method-payment').classList.toggle(
                 'hidden',
-                invPayment !== 'Transferencia Bancaria (ACH)' || !achDetails
+                !paymentInstructions
             );
 
             // Badge de estado en vista previa
@@ -1676,21 +1815,30 @@
         // NAVEGACIÓN ENTRE PESTAÑAS Y UTILIDADES UI
         // =========================================================================
         function switchTab(tabName) {
-            const editorView = document.getElementById('editor-view');
-            const historyView = document.getElementById('history-view');
-            const btnEditor = document.getElementById('tab-btn-editor');
-            const btnHistory = document.getElementById('tab-btn-history');
+            const views = {
+                home: document.getElementById('home-view'),
+                editor: document.getElementById('editor-view'),
+                history: document.getElementById('history-view'),
+                payments: document.getElementById('payments-view')
+            };
+            const buttons = {
+                home: document.getElementById('tab-btn-home'),
+                editor: document.getElementById('tab-btn-editor'),
+                history: document.getElementById('tab-btn-history'),
+                payments: document.getElementById('tab-btn-payments')
+            };
+            const activeClasses = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm';
+            const inactiveClasses = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
 
-            if (tabName === 'editor') {
-                editorView.classList.remove('hidden');
-                historyView.classList.add('hidden');
-                btnEditor.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm';
-                btnHistory.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
-            } else {
-                editorView.classList.add('hidden');
-                historyView.classList.remove('hidden');
-                btnHistory.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm';
-                btnEditor.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
+            Object.entries(views).forEach(([name, view]) => {
+                view.classList.toggle('hidden', name !== tabName);
+                buttons[name].className = name === tabName ? activeClasses : inactiveClasses;
+            });
+
+            document.getElementById('header-print-button').classList.toggle('hidden', tabName !== 'editor');
+            if (tabName === 'home') {
+                document.getElementById('home-invoice-count').textContent = savedInvoices.length.toLocaleString('es-PA');
+            } else if (tabName === 'history') {
                 renderHistoryTable();
             }
             lucide.createIcons();

@@ -22,7 +22,9 @@ El inicio de sesión permanece en el backend: las contraseñas se derivan con sc
 
 La importación desde `localStorage` de la versión anterior sigue disponible al iniciar sesión. Ejecuta `npm test` para probar autenticación, facturas y persistencia usando un servicio Supabase simulado.
 
-En **Datos del Emisor** puedes guardar las instrucciones de pago ACH. Se conservan en Supabase y aparecen en la factura impresa cuando el método de pago seleccionado es **Transferencia Bancaria (ACH)**.
+En **Configuración de pagos** puedes guardar instrucciones para cada método disponible (ACH, Yappy, efectivo, tarjetas y crédito). Se conservan en Supabase y el método seleccionado añade automáticamente sus instrucciones a la factura y al PDF. Los datos ACH guardados anteriormente se conservan.
+
+Al iniciar sesión, el panel principal permite abrir **Facturación**, **Historial de facturas** o **Configuración de pagos**.
 
 ## Inicio automático en Linux
 

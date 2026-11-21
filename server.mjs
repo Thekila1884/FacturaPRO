@@ -20,6 +20,16 @@ let setupTokenExpiresAt = process.env.VERCEL === '1' && configuredSetupToken
     ? Number.POSITIVE_INFINITY
     : 0;
 let setupTokenUsed = false;
+const achPaymentMethod = 'Transferencia Bancaria (ACH)';
+const defaultPaymentDetails = Object.fromEntries([
+    'Contado',
+    achPaymentMethod,
+    'Yappy Comercial',
+    'Efectivo',
+    'Tarjeta de Crédito / Débito',
+    'Crédito 15 días',
+    'Crédito 30 días'
+].map(method => [method, '']));
 
 if (process.env.VERCEL !== '1' && !['127.0.0.1', '::1', 'localhost'].includes(host)) {
     throw new Error('FacturaPro es local y solo puede escuchar en localhost, 127.0.0.1 o ::1.');
@@ -43,7 +53,8 @@ const defaultIssuer = {
     phone: '+507 6234-5678',
     email: 'facturacion@istmoservicios.com.pa',
     address: 'Ciudad de Panamá, Ave. Balboa, Torre Financial, Of. 802',
-    achDetails: ''
+    achDetails: '',
+    paymentDetails: defaultPaymentDetails
 };
 
 function jsonResponse(response, status, data, headers = {}) {
@@ -127,6 +138,7 @@ function validateIssuer(input) {
     }
     const issuer = {};
     for (const key of Object.keys(defaultIssuer)) {
+        if (key === 'achDetails' || key === 'paymentDetails') continue;
         const value = input[key] ?? '';
         if (typeof value !== 'string' || value.length > 500) {
             const error = new Error('Un campo de la empresa no es válido.');
@@ -135,6 +147,23 @@ function validateIssuer(input) {
         }
         issuer[key] = value.trim();
     }
+    if (input.paymentDetails !== undefined &&
+        (!input.paymentDetails || typeof input.paymentDetails !== 'object' || Array.isArray(input.paymentDetails))) {
+        const error = new Error('La configuración de métodos de pago no es válida.');
+        error.status = 400;
+        throw error;
+    }
+    issuer.paymentDetails = {};
+    for (const method of Object.keys(defaultPaymentDetails)) {
+        const value = input.paymentDetails?.[method] ?? (method === achPaymentMethod ? input.achDetails ?? '' : '');
+        if (typeof value !== 'string' || value.length > 500) {
+            const error = new Error('Las instrucciones de un método de pago no son válidas.');
+            error.status = 400;
+            throw error;
+        }
+        issuer.paymentDetails[method] = value.trim();
+    }
+    issuer.achDetails = issuer.paymentDetails[achPaymentMethod];
     return issuer;
 }
 
@@ -253,7 +282,21 @@ async function getIssuer() {
         'facturapro_settings',
         `select=value&key=eq.${encodeURIComponent('issuer')}&limit=1`
     );
-    return rows[0]?.value || defaultIssuer;
+    const stored = rows[0]?.value;
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return defaultIssuer;
+    const storedPaymentDetails = stored.paymentDetails && typeof stored.paymentDetails === 'object' &&
+        !Array.isArray(stored.paymentDetails) ? stored.paymentDetails : {};
+    const paymentDetails = Object.fromEntries(Object.keys(defaultPaymentDetails).map(method => [
+        method,
+        typeof storedPaymentDetails[method] === 'string' ? storedPaymentDetails[method] : ''
+    ]));
+    paymentDetails[achPaymentMethod] ||= typeof stored.achDetails === 'string' ? stored.achDetails : '';
+    return {
+        ...defaultIssuer,
+        ...stored,
+        achDetails: paymentDetails[achPaymentMethod],
+        paymentDetails
+    };
 }
 
 async function saveIssuer(issuer) {
