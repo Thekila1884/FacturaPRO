@@ -192,6 +192,34 @@ test('server rejects a non-loopback listener', async () => {
     assert.notEqual(exitCode, 0);
 });
 
+test('server requires a private setup token instead of logging one', async () => {
+    const childEnv = {
+        ...globalThis.process.env,
+        HOST: '127.0.0.1',
+        PORT: '0',
+        SUPABASE_URL: globalThis.process.env.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+        VERCEL: ''
+    };
+    delete childEnv.FACTURAPRO_SETUP_TOKEN;
+    const child = spawn(globalThis.process.execPath, ['server.mjs'], {
+        cwd: globalThis.process.cwd(),
+        env: childEnv,
+        stdio: ['ignore', 'pipe', 'pipe']
+    });
+    const output = [];
+    child.stdout.on('data', chunk => output.push(chunk));
+    child.stderr.on('data', chunk => output.push(chunk));
+    const timeout = setTimeout(() => child.kill('SIGTERM'), 2000);
+    const [exitCode] = await once(child, 'exit');
+    clearTimeout(timeout);
+    const logs = Buffer.concat(output).toString();
+
+    assert.equal(exitCode, 1);
+    assert.match(logs, /FACTURAPRO_SETUP_TOKEN/);
+    assert.doesNotMatch(logs, /Código de configuración inicial/);
+});
+
 test('Vercel API function exports a callable handler', () => {
     assert.equal(typeof vercelHandler, 'function');
 });

@@ -20,21 +20,29 @@
             background: radial-gradient(circle at top left, #123b36 0, transparent 38%), linear-gradient(135deg, #020617, #0f172a 58%, #111827);
         }
         #auth-view > div,
-        #confirm-modal > div {
+        #confirm-modal > div,
+        #details-modal > section {
             background-color: #111827;
             border-color: #334155;
         }
         #auth-view .text-slate-900,
-        #confirm-modal .text-slate-900 {
+        #confirm-modal .text-slate-900,
+        #details-modal .text-slate-900 {
             color: #f8fafc;
         }
         #auth-view .text-slate-700,
-        #confirm-modal .text-slate-700 {
+        #confirm-modal .text-slate-700,
+        #details-modal .text-slate-700 {
             color: #cbd5e1;
         }
         #auth-view .text-slate-500,
-        #confirm-modal .text-slate-500 {
+        #confirm-modal .text-slate-500,
+        #details-modal .text-slate-500 {
             color: #94a3b8;
+        }
+        #details-modal [class~="border-slate-200"],
+        #details-modal [class~="border-slate-300"] {
+            border-color: #334155 !important;
         }
         #auth-view button[type="submit"] {
             background-color: #059669;
@@ -307,63 +315,83 @@
                 box-shadow: none !important;
                 border: none !important;
                 border-radius: 0 !important;
-                padding: 0.05in !important;
+                padding: 0.18in !important;
                 margin: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
                 min-height: 0 !important;
                 overflow: visible !important;
-                font-size: 8pt !important;
+                font-size: 9pt !important;
+                line-height: 1.35 !important;
             }
             #invoice-header {
                 align-items: flex-start !important;
                 flex-direction: row !important;
-                gap: 0.15in !important;
+                gap: 0.22in !important;
                 margin-top: 0 !important;
-                padding-bottom: 0.12in !important;
+                padding-bottom: 0.2in !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
+            #invoice-header p {
+                line-height: 1.35 !important;
+            }
             #prev-issuer-name {
-                font-size: 14pt !important;
+                font-size: 16pt !important;
             }
             #invoice-header > div:last-child {
                 width: auto !important;
                 text-align: right !important;
             }
             #invoice-header > div:last-child > div:first-child {
-                font-size: 8pt !important;
+                font-size: 9pt !important;
             }
             #invoice-parties {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                gap: 0.12in !important;
-                padding: 0.12in 0 !important;
+                gap: 0.18in !important;
+                padding: 0.18in 0 !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
             #invoice-parties > div {
-                padding: 0.12in !important;
+                padding: 0.16in !important;
                 border-radius: 0.08in !important;
             }
             #invoice-parties p,
             #invoice-parties span {
-                font-size: 8pt !important;
-                line-height: 1.25 !important;
+                font-size: 9pt !important;
+                line-height: 1.35 !important;
             }
             #invoice-items {
-                padding: 0.12in 0 !important;
+                padding: 0.18in 0 !important;
             }
             #invoice-items table {
                 table-layout: fixed;
                 width: 100% !important;
-                font-size: 8pt !important;
+                font-size: 9pt !important;
+            }
+            #invoice-items th:not(:nth-child(2)) {
+                white-space: nowrap;
+            }
+            #invoice-items th:first-child,
+            #invoice-items td:first-child {
+                width: 0.66in !important;
+            }
+            #invoice-items th:nth-child(3),
+            #invoice-items td:nth-child(3),
+            #invoice-items th:nth-child(5),
+            #invoice-items td:nth-child(5) {
+                width: 0.95in !important;
+            }
+            #invoice-items th:nth-child(4),
+            #invoice-items td:nth-child(4) {
+                width: 0.72in !important;
             }
             #invoice-items th,
             #invoice-items td {
-                padding-top: 0.04in !important;
-                padding-bottom: 0.04in !important;
-                font-size: 8pt !important;
-                line-height: 1.25 !important;
+                padding: 0.08in 0.06in !important;
+                font-size: 9pt !important;
+                line-height: 1.35 !important;
                 overflow-wrap: anywhere;
             }
             #invoice-items thead {
@@ -377,29 +405,31 @@
                 display: grid !important;
                 grid-template-columns: minmax(0, 1fr) 2in !important;
                 align-items: start !important;
-                gap: 0.15in !important;
-                padding-top: 0.12in !important;
+                gap: 0.22in !important;
+                padding-top: 0.18in !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
             #invoice-totals > div {
-                font-size: 8pt !important;
+                font-size: 9pt !important;
             }
             #invoice-totals > div:last-child {
                 width: auto !important;
             }
             #invoice-totals #prev-notes {
-                min-height: 0 !important;
-                padding: 0.1in !important;
+                min-height: 0.5in !important;
+                padding: 0.12in !important;
             }
             #invoice-totals #prev-method-payment {
-                padding: 0.1in !important;
+                padding: 0.12in !important;
             }
             #invoice-totals #prev-grand-total {
-                font-size: 11pt !important;
+                font-size: 12pt !important;
             }
             #invoice-footer {
-                margin-top: 0.16in !important;
-                padding-top: 0.1in !important;
-                font-size: 7pt !important;
+                margin-top: 0.24in !important;
+                padding-top: 0.14in !important;
+                font-size: 8pt !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
@@ -483,7 +513,7 @@
                         class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
                 </div>
                 <div id="auth-setup-token-group" class="hidden">
-                    <label for="auth-setup-token" class="block text-sm font-medium text-slate-700 mb-1">Código de configuración</label>
+                    <label for="auth-setup-token" class="block text-sm font-medium text-slate-700 mb-1">Token de configuración inicial</label>
                     <input id="auth-setup-token" autocomplete="one-time-code"
                         class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
                     <p class="text-xs text-slate-500 mt-1">Código mostrado en la terminal al iniciar el servidor; vence en 15 minutos.</p>
@@ -623,7 +653,11 @@
                             <h2 class="text-base font-bold text-slate-900">Facturación por mes</h2>
                             <p class="mt-1 text-xs text-slate-500">Total de facturas no anuladas en los últimos 6 meses</p>
                         </div>
-                        <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">USD</span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="downloadDashboardCsv()" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">CSV</button>
+                            <button type="button" onclick="printDashboardPdf()" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500">PDF</button>
+                            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">USD</span>
+                        </div>
                     </div>
                     <p id="home-chart-empty" class="hidden rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">No hay facturación registrada en los últimos 6 meses.</p>
                     <div id="home-monthly-chart" role="list" aria-label="Facturación mensual en dólares, últimos seis meses" class="grid hidden grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-6"></div>
@@ -734,7 +768,11 @@
                         <h2 class="font-bold text-slate-900">Clientes guardados</h2>
                         <p id="client-catalog-count" class="mt-1 text-xs text-slate-500">0 clientes</p>
                     </div>
-                    <input id="client-catalog-search" type="search" oninput="renderClientCatalog()" placeholder="Buscar cliente..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 sm:w-64">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input id="client-catalog-search" type="search" oninput="renderClientCatalog()" placeholder="Buscar cliente..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 sm:w-56">
+                        <button type="button" onclick="downloadClientsCsv()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">CSV completo</button>
+                        <button type="button" onclick="printClientsPdf()" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">PDF completo</button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[700px] text-left text-sm">
@@ -752,11 +790,16 @@
             <div class="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div>
                     <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Reportes de facturación</h1>
-                    <p class="mt-2 text-sm text-slate-500">Filtra las facturas por período y estado, y exporta el resultado a CSV.</p>
+                    <p class="mt-2 text-sm text-slate-500">Filtra las facturas por período y estado, y exporta sus datos completos.</p>
                 </div>
-                <button type="button" onclick="downloadReportCsv()" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500">
-                    <i data-lucide="download" class="h-4 w-4"></i> Descargar CSV
-                </button>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="downloadReportCsv()" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                        <i data-lucide="download" class="h-4 w-4"></i> CSV
+                    </button>
+                    <button type="button" onclick="printReportPdf()" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500">
+                        <i data-lucide="printer" class="h-4 w-4"></i> PDF
+                    </button>
+                </div>
             </div>
             <div class="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-4">
                 <div><label for="report-date-from" class="mb-1 block text-xs font-semibold text-slate-600">Desde</label><input id="report-date-from" type="date" onchange="renderReports()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></div>
@@ -773,7 +816,7 @@
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[850px] text-left text-sm">
-                        <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Factura</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Pago</th><th class="px-4 py-3 text-right">ITBMS</th><th class="px-4 py-3 text-right">Total</th></tr></thead>
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Factura</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Pago</th><th class="px-4 py-3 text-right">ITBMS</th><th class="px-4 py-3 text-right">Total</th><th class="px-4 py-3 text-right">Acciones</th></tr></thead>
                         <tbody id="report-tbody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
@@ -787,7 +830,11 @@
                     <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Cuentas por cobrar</h1>
                     <p class="mt-2 text-sm text-slate-500">Saldos de facturas pendientes agrupados por fecha de vencimiento.</p>
                 </div>
-                <div><label for="receivables-as-of" class="mb-1 block text-xs font-semibold text-slate-600">Calcular al</label><input id="receivables-as-of" type="date" onchange="renderReceivables()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"></div>
+                <div class="flex flex-wrap items-end gap-2">
+                    <div><label for="receivables-as-of" class="mb-1 block text-xs font-semibold text-slate-600">Calcular al</label><input id="receivables-as-of" type="date" onchange="renderReceivables()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"></div>
+                    <button type="button" onclick="downloadReceivablesCsv()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">CSV</button>
+                    <button type="button" onclick="printReceivablesPdf()" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">PDF</button>
+                </div>
             </div>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">No vencidas</p><p id="receivable-current" class="mt-2 text-xl font-extrabold text-emerald-700">$0.00</p></article>
@@ -810,13 +857,19 @@
 
         <section id="payments-view" class="hidden space-y-6">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                <div class="flex items-start gap-4">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
-                        <i data-lucide="credit-card" class="h-6 w-6"></i>
-                    </span>
-                    <div>
-                        <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Configuración de pagos</h1>
-                        <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Configura los datos e instrucciones de cada método. Al elegir un método en la factura, su información se agregará automáticamente al documento final.</p>
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="flex items-start gap-4">
+                        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                            <i data-lucide="credit-card" class="h-6 w-6"></i>
+                        </span>
+                        <div>
+                            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Configuración de pagos</h1>
+                            <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Configura los datos e instrucciones de cada método. Al elegir un método en la factura, su información se agregará automáticamente al documento final.</p>
+                        </div>
+                    </div>
+                    <div class="flex shrink-0 gap-2">
+                        <button type="button" onclick="downloadPaymentsCsv()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">CSV</button>
+                        <button type="button" onclick="printPaymentsPdf()" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">PDF</button>
                     </div>
                 </div>
             </div>
@@ -991,6 +1044,10 @@
                                 <input type="text" id="issuer-address" oninput="saveIssuerAndPreview()" placeholder="Ciudad de Panamá, Calle 50, Edificio Global Plaza, Piso 10" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
                             </div>
                         </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="downloadIssuerCsv()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Exportar emisor CSV</button>
+                            <button type="button" onclick="printIssuerPdf()" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">Exportar emisor PDF</button>
+                        </div>
                         <p class="text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
                             <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
                             <span>Los datos del emisor se guardan automáticamente en la cuenta para futuras facturas.</span>
@@ -1122,7 +1179,11 @@
                         </button>
                         <button type="button" onclick="window.print()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition">
                             <i data-lucide="printer" class="w-4 h-4"></i>
-                            <span>Imprimir</span>
+                            <span>Imprimir / PDF</span>
+                        </button>
+                        <button type="button" onclick="downloadCurrentInvoiceCsv()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-500 text-white font-semibold text-sm transition hover:bg-slate-800">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>CSV</span>
                         </button>
                     </div>
                 </div>
@@ -1319,6 +1380,12 @@
                         <option value="Anulada">Anuladas</option>
                     </select>
 
+                    <button type="button" onclick="downloadHistoryCsv()" class="flex items-center gap-2 rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                        <i data-lucide="download" class="w-4 h-4"></i><span>CSV completo</span>
+                    </button>
+                    <button type="button" onclick="printHistoryPdf()" class="flex items-center gap-2 rounded-xl border border-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                        <i data-lucide="printer" class="w-4 h-4"></i><span>PDF completo</span>
+                    </button>
                     <button onclick="createNewInvoice(); switchTab('editor');" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition">
                         <i data-lucide="plus" class="w-4 h-4"></i>
                         <span>Crear Nueva Factura</span>
@@ -1359,6 +1426,19 @@
         </div>
 
     </main>
+
+    <div id="details-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm" onclick="if (event.target === this) closeDetailsModal()">
+        <section role="dialog" aria-modal="true" aria-labelledby="details-modal-title" class="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <header class="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+                <h2 id="details-modal-title" class="text-xl font-bold text-slate-900"></h2>
+                <button type="button" onclick="closeDetailsModal()" aria-label="Cerrar detalles" class="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50">
+                    <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+            </header>
+            <div id="details-modal-body" class="max-h-[70vh] overflow-y-auto p-5"></div>
+            <footer id="details-modal-actions" class="flex flex-wrap justify-end gap-2 border-t border-slate-200 p-5"></footer>
+        </section>
+    </div>
 
     <!-- MODAL DE CONFIRMACIÓN PERSONALIZADO (Sin window.confirm) -->
     <div id="confirm-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
@@ -1473,7 +1553,7 @@
             const setup = authMode === 'setup';
             document.getElementById('auth-title').textContent = setup ? 'Crear cuenta administradora' : 'Iniciar sesión';
             document.getElementById('auth-description').textContent = setup
-                ? 'Ingresa el código de un solo uso mostrado en la terminal al iniciar el servidor. Vence en 15 minutos.'
+                ? 'Ingresa el token privado configurado como FACTURAPRO_SETUP_TOKEN. No se muestra ni se registra en la aplicación.'
                 : 'Ingresa tus credenciales para acceder a las facturas y la configuración.';
             document.getElementById('auth-submit').textContent = setup ? 'Crear cuenta e ingresar' : 'Iniciar sesión';
             document.getElementById('auth-password-hint').classList.toggle('hidden', !setup);
@@ -2031,17 +2111,10 @@
             }
         }
 
-        async function saveInvoiceToHistory() {
+        function collectCurrentInvoiceRecord() {
             const invNumber = document.getElementById('inv-number').value.trim();
-            if (!invNumber) {
-                showToast('Por favor ingresa un número de factura válido.', 'error');
-                document.getElementById('inv-number').focus();
-                return;
-            }
-
-            const totals = calculateTotals();
-            const invoiceRecord = {
-                id: currentEditingId || ('inv_' + Date.now()),
+            return {
+                id: currentEditingId || '',
                 number: invNumber,
                 status: document.getElementById('inv-status').value,
                 date: document.getElementById('inv-date').value || getTodayISO(),
@@ -2055,13 +2128,34 @@
                     email: document.getElementById('client-email').value.trim(),
                     address: document.getElementById('client-address').value.trim()
                 },
-                items: JSON.parse(JSON.stringify(invoiceItems)),
+                items: invoiceItems.map(item => ({ ...item })),
                 discountType: document.getElementById('discount-type').value,
                 discountValue: parseFloat(document.getElementById('discount-value').value) || 0,
                 notes: document.getElementById('inv-notes').value.trim(),
-                totals: totals,
+                totals: calculateTotals(),
                 updatedAt: new Date().toISOString()
             };
+        }
+
+        function downloadCurrentInvoiceCsv() {
+            const invoice = collectCurrentInvoiceRecord();
+            if (!invoice.number) {
+                showToast('Ingresa el número de factura antes de exportar.', 'error');
+                document.getElementById('inv-number').focus();
+                return;
+            }
+            downloadInvoiceCsv(invoice, `facturapro-factura-${invoice.number}`);
+        }
+
+        async function saveInvoiceToHistory() {
+            const invNumber = document.getElementById('inv-number').value.trim();
+            if (!invNumber) {
+                showToast('Por favor ingresa un número de factura válido.', 'error');
+                document.getElementById('inv-number').focus();
+                return;
+            }
+            const invoiceRecord = collectCurrentInvoiceRecord();
+            invoiceRecord.id = currentEditingId || ('inv_' + Date.now());
 
             try {
                 const isUpdate = Boolean(currentEditingId);
@@ -2335,6 +2429,7 @@
                 actions.className = 'inline-flex gap-2';
                 [
                     ['Usar', () => useCatalogClientAndOpen(client.id), 'bg-emerald-600 text-white hover:bg-emerald-500'],
+                    ['Detalles', () => showClientDetails(client.id), 'border border-slate-300 text-slate-700 hover:bg-slate-50'],
                     ['Editar', () => editCatalogClient(client.id), 'border border-slate-300 text-slate-700 hover:bg-slate-50'],
                     ['Eliminar', () => requestDeleteCatalogClient(client.id), 'border border-rose-200 text-rose-700 hover:bg-rose-50']
                 ].forEach(([label, action, classes]) => {
@@ -2437,6 +2532,15 @@
                     cell.textContent = value;
                     row.appendChild(cell);
                 });
+                const actionCell = document.createElement('td');
+                actionCell.className = 'px-4 py-3 text-right';
+                const detailsButton = document.createElement('button');
+                detailsButton.type = 'button';
+                detailsButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
+                detailsButton.textContent = 'Ver detalles';
+                detailsButton.addEventListener('click', () => showInvoiceDetails(invoice.id));
+                actionCell.appendChild(detailsButton);
+                row.appendChild(actionCell);
                 tbody.appendChild(row);
             });
         }
@@ -2447,38 +2551,464 @@
             return `"${text.replace(/"/g, '""')}"`;
         }
 
-        function downloadReportCsv() {
-            if (document.getElementById('report-filter-error').textContent) {
-                showToast('Corrige el rango de fechas antes de exportar.', 'error');
-                return;
-            }
-            const rows = [
-                ['Fecha', 'Vencimiento', 'Factura', 'Cliente', 'RUC / ID', 'Estado', 'Método de pago', 'Subtotal', 'ITBMS', 'Total'],
-                ...getReportInvoices().map(invoice => [
-                    invoice.date || '',
-                    invoice.dueDate || '',
-                    invoice.number,
-                    invoice.client?.name || 'Cliente General',
-                    invoice.client?.ruc || '',
-                    invoice.status,
-                    invoice.paymentTerms || 'Contado',
-                    Number(invoice.totals?.subtotal || 0).toFixed(2),
-                    Number(invoice.totals?.itbms || 0).toFixed(2),
-                    Number(invoice.totals?.grandTotal || 0).toFixed(2)
-                ])
-            ];
-            const csv = `\uFEFF${rows.map(row => row.map(csvCell).join(',')).join('\r\n')}`;
+        function downloadCsvFile(filename, headers, rows) {
+            const csv = `\uFEFF${[headers, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n')}`;
             const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
             const link = document.createElement('a');
             link.href = url;
-            link.download = `facturapro-reporte-${document.getElementById('report-date-from').value || 'inicio'}-${document.getElementById('report-date-to').value || 'hoy'}.csv`;
+            link.download = `${String(filename).replace(/[^a-zA-Z0-9._-]+/g, '-')}.csv`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
-        function renderReceivables() {
+        const invoiceCsvHeaders = [
+            'ID factura', 'Número', 'Estado', 'Fecha de emisión', 'Fecha de vencimiento',
+            'Cliente', 'RUC / ID', 'D.V.', 'Teléfono', 'Correo', 'Dirección', 'Método de pago',
+            'Tipo de descuento', 'Valor de descuento', 'Notas', 'ID de línea', 'Cantidad',
+            'Descripción', 'Precio unitario USD', 'Aplica ITBMS', 'Subtotal de línea USD',
+            'Exento USD', 'Gravado USD', 'Subtotal USD', 'Descuento USD', 'ITBMS USD',
+            'Total USD', 'Actualizada'
+        ];
+
+        function invoiceCsvRows(invoices, extraValues = new Map()) {
+            return invoices.flatMap(invoice => {
+                const items = invoice.items?.length ? invoice.items : [{}];
+                return items.map(item => [
+                    invoice.id, invoice.number, invoice.status, invoice.date, invoice.dueDate,
+                    invoice.client?.name, invoice.client?.ruc, invoice.client?.dv,
+                    invoice.client?.phone, invoice.client?.email, invoice.client?.address,
+                    invoice.paymentTerms, invoice.discountType, invoice.discountValue, invoice.notes,
+                    item.id, item.qty, item.description, item.price, item.itbms ? 'Sí' : 'No',
+                    Number(item.qty || 0) * Number(item.price || 0),
+                    invoice.totals?.exempt, invoice.totals?.taxable, invoice.totals?.subtotal,
+                    invoice.totals?.discount, invoice.totals?.itbms, invoice.totals?.grandTotal,
+                    invoice.updatedAt, ...(extraValues.get(invoice.id) || [])
+                ]);
+            });
+        }
+
+        function buildInvoiceModuleCsv(invoices, summaryRows, extraHeaders = [], extraValues = new Map()) {
+            const headers = ['Tipo de registro', 'Resumen', 'Valor', ...invoiceCsvHeaders, ...extraHeaders];
+            const emptyDetails = Array(invoiceCsvHeaders.length + extraHeaders.length).fill('');
+            const rows = [
+                ...summaryRows.map(([label, value]) => ['Resumen', label, value, ...emptyDetails]),
+                ...invoiceCsvRows(invoices, extraValues).map(row => ['Detalle', '', '', ...row])
+            ];
+            return { headers, rows };
+        }
+
+        function downloadInvoiceModuleCsv(filename, invoices, summaryRows, extraHeaders = [], extraValues = new Map()) {
+            const { headers, rows } = buildInvoiceModuleCsv(invoices, summaryRows, extraHeaders, extraValues);
+            downloadCsvFile(filename, headers, rows);
+        }
+
+        function downloadInvoiceCsv(invoice, filename = `facturapro-factura-${invoice.number}`) {
+            downloadCsvFile(filename, invoiceCsvHeaders, invoiceCsvRows([invoice]));
+        }
+
+        function downloadClientsCsv() {
+            const headers = ['ID', 'Nombre / Razón social', 'RUC / ID', 'D.V.', 'Teléfono', 'Correo', 'Dirección'];
+            const rows = savedClients.map(client => [
+                client.id, client.name, client.ruc, client.dv, client.phone, client.email, client.address
+            ]);
+            downloadCsvFile('facturapro-clientes', headers, rows);
+        }
+
+        function downloadClientCsv(client) {
+            downloadCsvFile(`facturapro-cliente-${client.name}`, [
+                'ID', 'Nombre / Razón social', 'RUC / ID', 'D.V.', 'Teléfono', 'Correo', 'Dirección'
+            ], [[client.id, client.name, client.ruc, client.dv, client.phone, client.email, client.address]]);
+        }
+
+        function createPrintDocument(title, subtitle) {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                showToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para exportar a PDF.', 'error');
+                return null;
+            }
+            const printDocument = printWindow.document;
+            printDocument.documentElement.lang = 'es';
+            printDocument.title = title;
+            const charset = printDocument.createElement('meta');
+            charset.setAttribute('charset', 'utf-8');
+            const viewport = printDocument.createElement('meta');
+            viewport.name = 'viewport';
+            viewport.content = 'width=device-width, initial-scale=1';
+            const titleElement = printDocument.createElement('title');
+            titleElement.textContent = title;
+            const style = printDocument.createElement('style');
+            style.textContent = `
+                * { box-sizing: border-box; }
+                body { margin: 0 auto; max-width: 1000px; padding: 28px; color: #0f172a; font: 12px Arial, sans-serif; }
+                h1 { margin: 0; font-size: 22px; }
+                h2 { margin: 0 0 10px; font-size: 16px; }
+                h3 { margin: 16px 0 8px; font-size: 13px; }
+                p { margin: 6px 0; line-height: 1.5; }
+                .report-header { margin-bottom: 20px; border-bottom: 2px solid #10b981; padding-bottom: 12px; }
+                .report-subtitle { color: #475569; }
+                .print-action { margin-top: 12px; border: 0; border-radius: 6px; background: #059669; color: white; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+                .record { margin: 0 0 18px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; }
+                .record-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+                .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin: 12px 0; }
+                .field { min-width: 0; overflow-wrap: anywhere; }
+                .field-label { display: block; color: #475569; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+                .field-value { display: block; margin-top: 2px; white-space: pre-wrap; }
+                table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; }
+                th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+                th { background: #f1f5f9; }
+                .totals { margin-left: auto; width: min(100%, 340px); }
+                .totals td:last-child { text-align: right; white-space: nowrap; }
+                .empty { color: #475569; font-style: italic; }
+                @media print {
+                    @page { size: letter portrait; margin: 0.4in; }
+                    body { max-width: none; padding: 0; }
+                    .no-print { display: none !important; }
+                    .record { break-inside: auto; }
+                    tr, .field { break-inside: avoid; }
+                    thead { display: table-header-group; }
+                }
+            `;
+            printDocument.head.replaceChildren(charset, viewport, titleElement, style);
+            printDocument.body.replaceChildren();
+            const header = printDocument.createElement('header');
+            header.className = 'report-header';
+            const heading = printDocument.createElement('h1');
+            heading.textContent = title;
+            const description = printDocument.createElement('p');
+            description.className = 'report-subtitle';
+            description.textContent = subtitle;
+            const printButton = printDocument.createElement('button');
+            printButton.type = 'button';
+            printButton.className = 'print-action no-print';
+            printButton.textContent = 'Imprimir / Guardar como PDF';
+            printButton.addEventListener('click', () => printWindow.print());
+            header.append(heading, description, printButton);
+            printDocument.body.appendChild(header);
+            return { printWindow, printDocument };
+        }
+
+        function launchPrintDialog(printWindow) {
+            printWindow.focus();
+            setTimeout(() => {
+                if (!printWindow.closed) printWindow.print();
+            }, 100);
+        }
+
+        function appendPrintFields(printDocument, container, fields) {
+            const grid = printDocument.createElement('div');
+            grid.className = 'fields';
+            fields.forEach(([label, value]) => {
+                const field = printDocument.createElement('div');
+                field.className = 'field';
+                const fieldLabel = printDocument.createElement('span');
+                fieldLabel.className = 'field-label';
+                fieldLabel.textContent = label;
+                const fieldValue = printDocument.createElement('span');
+                fieldValue.className = 'field-value';
+                fieldValue.textContent = String(value ?? '—') || '—';
+                field.append(fieldLabel, fieldValue);
+                grid.appendChild(field);
+            });
+            container.appendChild(grid);
+        }
+
+        function appendPrintTable(printDocument, container, headers, rows) {
+            const table = printDocument.createElement('table');
+            const thead = printDocument.createElement('thead');
+            const headerRow = printDocument.createElement('tr');
+            headers.forEach(label => {
+                const cell = printDocument.createElement('th');
+                cell.textContent = label;
+                headerRow.appendChild(cell);
+            });
+            thead.appendChild(headerRow);
+            const tbody = printDocument.createElement('tbody');
+            rows.forEach(values => {
+                const row = printDocument.createElement('tr');
+                values.forEach(value => {
+                    const cell = printDocument.createElement('td');
+                    cell.textContent = String(value ?? '—') || '—';
+                    row.appendChild(cell);
+                });
+                tbody.appendChild(row);
+            });
+            table.append(thead, tbody);
+            container.appendChild(table);
+        }
+
+        function printClientsPdf(clients = savedClients, title = 'Catálogo de clientes') {
+            const report = createPrintDocument(title, `${clients.length.toLocaleString('es-PA')} cliente(s) • Datos completos del catálogo`);
+            if (!report) return;
+            const { printDocument, printWindow } = report;
+            if (!clients.length) {
+                const empty = printDocument.createElement('p');
+                empty.className = 'empty';
+                empty.textContent = 'No hay clientes para exportar.';
+                printDocument.body.appendChild(empty);
+            }
+            clients.forEach(client => {
+                const record = printDocument.createElement('section');
+                record.className = 'record';
+                const heading = printDocument.createElement('h2');
+                heading.textContent = client.name || 'Cliente sin nombre';
+                record.appendChild(heading);
+                appendPrintFields(printDocument, record, [
+                    ['ID', client.id], ['RUC / ID', client.ruc], ['D.V.', client.dv],
+                    ['Teléfono', client.phone], ['Correo', client.email], ['Dirección', client.address]
+                ]);
+                printDocument.body.appendChild(record);
+            });
+            launchPrintDialog(printWindow);
+        }
+
+        function openDetailsModal(title, content, actions) {
+            document.getElementById('details-modal-title').textContent = title;
+            document.getElementById('details-modal-body').replaceChildren(content);
+            const actionsContainer = document.getElementById('details-modal-actions');
+            actionsContainer.replaceChildren();
+            actions.forEach(({ label, action, primary = false }) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = primary
+                    ? 'rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500'
+                    : 'rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50';
+                button.textContent = label;
+                button.addEventListener('click', action);
+                actionsContainer.appendChild(button);
+            });
+            const modal = document.getElementById('details-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeDetailsModal() {
+            const modal = document.getElementById('details-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function createDetailFields(fields) {
+            const grid = document.createElement('dl');
+            grid.className = 'grid grid-cols-1 gap-3 sm:grid-cols-2';
+            fields.forEach(([label, value]) => {
+                const field = document.createElement('div');
+                field.className = 'min-w-0 rounded-xl border border-slate-700 p-3';
+                const term = document.createElement('dt');
+                term.className = 'text-xs font-semibold uppercase text-slate-400';
+                term.textContent = label;
+                const description = document.createElement('dd');
+                description.className = 'mt-1 break-words whitespace-pre-wrap text-sm text-slate-100';
+                description.textContent = String(value ?? '') || '—';
+                field.append(term, description);
+                grid.appendChild(field);
+            });
+            return grid;
+        }
+
+        function showClientDetails(id) {
+            const client = savedClients.find(item => item.id === id);
+            if (!client) return;
+            const content = createDetailFields([
+                ['ID', client.id], ['Nombre / Razón social', client.name], ['RUC / ID', client.ruc],
+                ['D.V.', client.dv], ['Teléfono', client.phone], ['Correo', client.email], ['Dirección', client.address]
+            ]);
+            openDetailsModal(`Detalles de ${client.name}`, content, [
+                { label: 'Descargar CSV', action: () => downloadClientCsv(client) },
+                { label: 'Descargar PDF', action: () => printClientsPdf([client], `Cliente: ${client.name}`), primary: true }
+            ]);
+        }
+
+        function printInvoiceRecords(title, subtitle, invoices, extraFields = new Map(), summaryRows = []) {
+            const report = createPrintDocument(title, subtitle);
+            if (!report) return;
+            const { printDocument, printWindow } = report;
+            if (summaryRows.length) {
+                appendPrintTable(printDocument, printDocument.body, ['Resumen', 'Valor'], summaryRows);
+            }
+            if (!invoices.length) {
+                const empty = printDocument.createElement('p');
+                empty.className = 'empty';
+                empty.textContent = 'No hay facturas para exportar.';
+                printDocument.body.appendChild(empty);
+            }
+            invoices.forEach(invoice => {
+                const record = printDocument.createElement('section');
+                record.className = 'record';
+                const titleRow = printDocument.createElement('div');
+                titleRow.className = 'record-title';
+                const heading = printDocument.createElement('h2');
+                heading.textContent = `Factura ${invoice.number || ''}`;
+                const status = printDocument.createElement('strong');
+                status.textContent = invoice.status || '—';
+                titleRow.append(heading, status);
+                record.appendChild(titleRow);
+                const fields = [
+                    ['ID', invoice.id], ['Fecha de emisión', formatDateReadable(invoice.date)],
+                    ['Vencimiento', formatDateReadable(invoice.dueDate)], ['Estado', invoice.status],
+                    ['Método de pago', invoice.paymentTerms], ['Cliente', invoice.client?.name],
+                    ['RUC / ID', invoice.client?.ruc], ['D.V.', invoice.client?.dv],
+                    ['Teléfono', invoice.client?.phone], ['Correo', invoice.client?.email],
+                    ['Dirección', invoice.client?.address], ['Tipo de descuento', invoice.discountType],
+                    ['Valor de descuento', invoice.discountValue], ['Notas', invoice.notes],
+                    ['Actualizada', invoice.updatedAt]
+                ];
+                fields.push(...(extraFields.get(invoice.id) || []));
+                appendPrintFields(printDocument, record, fields);
+                const itemsHeading = printDocument.createElement('h3');
+                itemsHeading.textContent = 'Detalle de líneas';
+                record.appendChild(itemsHeading);
+                appendPrintTable(printDocument, record,
+                    ['Cantidad', 'Descripción', 'Precio unitario', 'ITBMS', 'Subtotal de línea'],
+                    (invoice.items || []).map(item => [
+                        item.qty, item.description, formatUSD(Number(item.price) || 0),
+                        item.itbms ? 'Sí' : 'No',
+                        formatUSD((Number(item.qty) || 0) * (Number(item.price) || 0))
+                    ])
+                );
+                const totals = invoice.totals || {};
+                appendPrintTable(printDocument, record, ['Resumen', 'USD'], [
+                    ['Exento', formatUSD(totals.exempt || 0)],
+                    ['Gravado', formatUSD(totals.taxable || 0)],
+                    ['Subtotal', formatUSD(totals.subtotal || 0)],
+                    ['Descuento', formatUSD(totals.discount || 0)],
+                    ['ITBMS', formatUSD(totals.itbms || 0)],
+                    ['Total', formatUSD(totals.grandTotal || 0)]
+                ]);
+                printDocument.body.appendChild(record);
+            });
+            launchPrintDialog(printWindow);
+        }
+
+        function showInvoiceDetails(id) {
+            const invoice = savedInvoices.find(item => item.id === id);
+            if (!invoice) return;
+            const content = document.createElement('div');
+            content.appendChild(createDetailFields([
+                ['ID', invoice.id], ['Número', invoice.number], ['Estado', invoice.status],
+                ['Fecha de emisión', formatDateReadable(invoice.date)],
+                ['Fecha de vencimiento', formatDateReadable(invoice.dueDate)],
+                ['Método de pago', invoice.paymentTerms], ['Cliente', invoice.client?.name],
+                ['RUC / ID', invoice.client?.ruc], ['D.V.', invoice.client?.dv],
+                ['Teléfono', invoice.client?.phone], ['Correo', invoice.client?.email],
+                ['Dirección', invoice.client?.address], ['Tipo de descuento', invoice.discountType],
+                ['Valor del descuento', invoice.discountValue], ['Notas', invoice.notes],
+                ['Actualizada', invoice.updatedAt]
+            ]));
+            const itemsHeading = document.createElement('h3');
+            itemsHeading.className = 'mt-5 text-sm font-bold text-slate-100';
+            itemsHeading.textContent = 'Detalle de líneas';
+            content.appendChild(itemsHeading);
+            const itemsTable = document.createElement('div');
+            itemsTable.className = 'mt-2 overflow-x-auto rounded-xl border border-slate-700';
+            const table = document.createElement('table');
+            table.className = 'w-full min-w-[600px] text-left text-sm';
+            const header = document.createElement('tr');
+            ['Cantidad', 'Descripción', 'Precio unitario', 'ITBMS', 'Subtotal'].forEach(label => {
+                const cell = document.createElement('th');
+                cell.className = 'bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300';
+                cell.textContent = label;
+                header.appendChild(cell);
+            });
+            const thead = document.createElement('thead');
+            thead.appendChild(header);
+            const tbody = document.createElement('tbody');
+            (invoice.items || []).forEach(item => {
+                const row = document.createElement('tr');
+                [
+                    item.qty, item.description, formatUSD(Number(item.price) || 0),
+                    item.itbms ? 'Sí' : 'No',
+                    formatUSD((Number(item.qty) || 0) * (Number(item.price) || 0))
+                ].forEach(value => {
+                    const cell = document.createElement('td');
+                    cell.className = 'border-t border-slate-700 px-3 py-2 text-slate-200';
+                    cell.textContent = String(value ?? '—');
+                    row.appendChild(cell);
+                });
+                tbody.appendChild(row);
+            });
+            table.append(thead, tbody);
+            itemsTable.appendChild(table);
+            content.appendChild(itemsTable);
+            content.appendChild(createDetailFields([
+                ['Exento', formatUSD(invoice.totals?.exempt || 0)],
+                ['Gravado', formatUSD(invoice.totals?.taxable || 0)],
+                ['Subtotal', formatUSD(invoice.totals?.subtotal || 0)],
+                ['Descuento', formatUSD(invoice.totals?.discount || 0)],
+                ['ITBMS', formatUSD(invoice.totals?.itbms || 0)],
+                ['Total', formatUSD(invoice.totals?.grandTotal || 0)]
+            ]));
+            openDetailsModal(`Factura ${invoice.number}`, content, [
+                { label: 'Descargar CSV', action: () => downloadInvoiceCsv(invoice) },
+                {
+                    label: 'Descargar PDF',
+                    action: () => printInvoiceRecords(`Factura ${invoice.number}`, 'Detalle completo de la factura', [invoice]),
+                    primary: true
+                }
+            ]);
+        }
+
+        function downloadHistoryCsv() {
+            const metrics = calculateFinancialMetrics();
+            downloadInvoiceModuleCsv('facturapro-historial-completo', savedInvoices, [
+                ['Facturas registradas', savedInvoices.length],
+                ['Total facturado (sin anuladas) USD', metrics.totalBilled],
+                ['Total pagado USD', metrics.totalPaid],
+                ['Cantidad pagada', metrics.countPaid],
+                ['Total pendiente USD', metrics.totalPending],
+                ['Cantidad pendiente', metrics.countPending],
+                ['ITBMS USD', metrics.totalItbms]
+            ]);
+        }
+
+        function printHistoryPdf() {
+            const metrics = calculateFinancialMetrics();
+            printInvoiceRecords('Historial de facturas', `${savedInvoices.length.toLocaleString('es-PA')} factura(s) • Datos completos`, savedInvoices, new Map(), [
+                ['Facturas registradas', savedInvoices.length],
+                ['Total facturado (sin anuladas)', formatUSD(metrics.totalBilled)],
+                ['Total pagado', formatUSD(metrics.totalPaid)],
+                ['Cantidad pagada', metrics.countPaid],
+                ['Total pendiente', formatUSD(metrics.totalPending)],
+                ['Cantidad pendiente', metrics.countPending],
+                ['ITBMS', formatUSD(metrics.totalItbms)]
+            ]);
+        }
+
+        function downloadReportCsv() {
+            const invoices = getReportInvoices();
+            if (document.getElementById('report-filter-error').textContent) {
+                showToast('Corrige el rango de fechas antes de exportar.', 'error');
+                return;
+            }
+            const validInvoices = invoices.filter(invoice => invoice.status !== 'Anulada');
+            const filename = `facturapro-reporte-${document.getElementById('report-date-from').value || 'inicio'}-${document.getElementById('report-date-to').value || 'hoy'}`;
+            downloadInvoiceModuleCsv(filename, invoices, [
+                ['Facturas', invoices.length],
+                ['Total válido USD', validInvoices.reduce((sum, invoice) => sum + (Number(invoice.totals?.grandTotal) || 0), 0)],
+                ['ITBMS válido USD', validInvoices.reduce((sum, invoice) => sum + (Number(invoice.totals?.itbms) || 0), 0)]
+            ]);
+        }
+
+        function printReportPdf() {
+            const invoices = getReportInvoices();
+            if (document.getElementById('report-filter-error').textContent) {
+                showToast('Corrige el rango de fechas antes de exportar.', 'error');
+                return;
+            }
+            const from = document.getElementById('report-date-from').value || 'Sin límite';
+            const to = document.getElementById('report-date-to').value || 'Sin límite';
+            const status = document.getElementById('report-status').selectedOptions[0].textContent;
+            const validInvoices = invoices.filter(invoice => invoice.status !== 'Anulada');
+            printInvoiceRecords('Reporte de facturación', `Período: ${from} a ${to} • Estado: ${status} • ${invoices.length} factura(s)`, invoices, new Map(), [
+                ['Facturas', invoices.length],
+                ['Total válido', formatUSD(validInvoices.reduce((sum, invoice) => sum + (Number(invoice.totals?.grandTotal) || 0), 0))],
+                ['ITBMS válido', formatUSD(validInvoices.reduce((sum, invoice) => sum + (Number(invoice.totals?.itbms) || 0), 0))]
+            ]);
+        }
+
+        function getReceivablesSnapshot() {
             const asOf = document.getElementById('receivables-as-of').value || getTodayISO();
             const asOfTime = Date.parse(`${asOf}T00:00:00Z`);
             const buckets = { current: 0, days1to30: 0, days31to60: 0, over60: 0, noDueDate: 0 };
@@ -2499,7 +3029,17 @@
                 if (b.daysLate === null) return -1;
                 return b.daysLate - a.daysLate;
             });
+            return { asOf, buckets, rows };
+        }
 
+        function getReceivableAgingLabel(daysLate) {
+            if (daysLate === null) return 'Sin fecha de vencimiento';
+            if (daysLate === 0) return 'Al día';
+            return `${daysLate} día${daysLate === 1 ? '' : 's'} vencida`;
+        }
+
+        function renderReceivables() {
+            const { buckets, rows } = getReceivablesSnapshot();
             document.getElementById('receivable-current').textContent = formatUSD(buckets.current);
             document.getElementById('receivable-1-30').textContent = formatUSD(buckets.days1to30);
             document.getElementById('receivable-31-60').textContent = formatUSD(buckets.days31to60);
@@ -2518,7 +3058,7 @@
                     dueDate ? formatDateReadable(dueDate) : 'Sin fecha',
                     invoice.number,
                     invoice.client?.name || 'Cliente General',
-                    daysLate === null ? 'Sin fecha de vencimiento' : daysLate > 0 ? `${daysLate} día${daysLate === 1 ? '' : 's'} vencida` : 'Al día'
+                    getReceivableAgingLabel(daysLate)
                 ];
                 values.forEach(value => {
                     const cell = document.createElement('td');
@@ -2531,6 +3071,11 @@
                 amountCell.textContent = formatUSD(amount);
                 const actionCell = document.createElement('td');
                 actionCell.className = 'px-4 py-3 text-right';
+                const detailsButton = document.createElement('button');
+                detailsButton.type = 'button';
+                detailsButton.className = 'mr-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
+                detailsButton.textContent = 'Detalles';
+                detailsButton.addEventListener('click', () => showInvoiceDetails(invoice.id));
                 const editButton = document.createElement('button');
                 editButton.type = 'button';
                 editButton.className = 'rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600';
@@ -2541,10 +3086,55 @@
                 paidButton.className = 'ml-1 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50';
                 paidButton.textContent = 'Marcar pagada';
                 paidButton.addEventListener('click', () => quickToggleStatus(invoice.id));
-                actionCell.append(editButton, paidButton);
+                actionCell.append(detailsButton, editButton, paidButton);
                 row.append(amountCell, actionCell);
                 tbody.appendChild(row);
             });
+        }
+
+        function downloadReceivablesCsv() {
+            const { asOf, buckets, rows } = getReceivablesSnapshot();
+            const agingById = new Map(rows.map(({ invoice, daysLate, amount }) => [
+                invoice.id,
+                [asOf, daysLate ?? '', getReceivableAgingLabel(daysLate), amount]
+            ]));
+            downloadInvoiceModuleCsv('facturapro-cuentas-por-cobrar', rows.map(row => row.invoice), [
+                ['Calculado al', asOf],
+                ['Facturas pendientes', rows.length],
+                ['No vencidas USD', buckets.current],
+                ['1–30 días USD', buckets.days1to30],
+                ['31–60 días USD', buckets.days31to60],
+                ['Más de 60 días USD', buckets.over60],
+                ['Sin vencimiento USD', buckets.noDueDate],
+                ['Total pendiente USD', rows.reduce((sum, row) => sum + row.amount, 0)]
+            ], ['Calculado al', 'Días de atraso', 'Antigüedad', 'Saldo USD'], agingById);
+        }
+
+        function printReceivablesPdf() {
+            const { asOf, buckets, rows } = getReceivablesSnapshot();
+            const extraFields = new Map(rows.map(({ invoice, daysLate, amount }) => [
+                invoice.id,
+                [
+                    ['Calculado al', formatDateReadable(asOf)],
+                    ['Días de atraso', daysLate ?? '—'],
+                    ['Antigüedad', getReceivableAgingLabel(daysLate)],
+                    ['Saldo pendiente', formatUSD(amount)]
+                ]
+            ]));
+            printInvoiceRecords(
+                'Cuentas por cobrar',
+                `Calculado al ${formatDateReadable(asOf)} • ${rows.length.toLocaleString('es-PA')} factura(s) pendiente(s)`,
+                rows.map(row => row.invoice),
+                extraFields,
+                [
+                    ['No vencidas', formatUSD(buckets.current)],
+                    ['1–30 días vencidas', formatUSD(buckets.days1to30)],
+                    ['31–60 días vencidas', formatUSD(buckets.days31to60)],
+                    ['Más de 60 días vencidas', formatUSD(buckets.over60)],
+                    ['Sin fecha de vencimiento', formatUSD(buckets.noDueDate)],
+                    ['Total pendiente', formatUSD(rows.reduce((sum, row) => sum + row.amount, 0))]
+                ]
+            );
         }
 
         function calculateFinancialMetrics() {
@@ -2576,17 +3166,7 @@
             return metrics;
         }
 
-        function renderHomeDashboard() {
-            const metrics = calculateFinancialMetrics();
-            document.getElementById('home-invoice-count').textContent = savedInvoices.length.toLocaleString('es-PA');
-            document.getElementById('home-total-billed').textContent = formatUSD(metrics.totalBilled);
-            document.getElementById('home-total-paid').textContent = formatUSD(metrics.totalPaid);
-            document.getElementById('home-paid-count').textContent =
-                `${metrics.countPaid.toLocaleString('es-PA')} factura${metrics.countPaid === 1 ? '' : 's'} pagada${metrics.countPaid === 1 ? '' : 's'}`;
-            document.getElementById('home-total-pending').textContent = formatUSD(metrics.totalPending);
-            document.getElementById('home-pending-count').textContent =
-                `${metrics.countPending.toLocaleString('es-PA')} factura${metrics.countPending === 1 ? '' : 's'} pendiente${metrics.countPending === 1 ? '' : 's'}`;
-
+        function getDashboardMonthlyTotals() {
             const now = new Date();
             const months = Array.from({ length: 6 }, (_, index) => {
                 const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1);
@@ -2598,11 +3178,96 @@
                 };
             });
             const monthByKey = new Map(months.map(month => [month.key, month]));
-            savedInvoices.forEach(inv => {
-                if (inv.status === 'Anulada' || typeof inv.date !== 'string') return;
-                const month = monthByKey.get(inv.date.slice(0, 7));
-                if (month) month.total += Number(inv.totals?.grandTotal) || 0;
+            savedInvoices.forEach(invoice => {
+                if (invoice.status === 'Anulada' || typeof invoice.date !== 'string') return;
+                const month = monthByKey.get(invoice.date.slice(0, 7));
+                if (month) month.total += Number(invoice.totals?.grandTotal) || 0;
             });
+            return months;
+        }
+
+        function getDashboardExportRows() {
+            const metrics = calculateFinancialMetrics();
+            return [
+                ['Facturas registradas', savedInvoices.length, 'Acumulado'],
+                ['Total facturado', metrics.totalBilled, 'USD'],
+                ['Total pagado', metrics.totalPaid, 'USD'],
+                ['Cantidad pagada', metrics.countPaid, 'Facturas'],
+                ['Total pendiente', metrics.totalPending, 'USD'],
+                ['Cantidad pendiente', metrics.countPending, 'Facturas'],
+                ['ITBMS', metrics.totalItbms, 'USD'],
+                ...getDashboardMonthlyTotals().map(month => [`Facturación ${month.label}`, month.total, 'USD'])
+            ];
+        }
+
+        function downloadDashboardCsv() {
+            downloadCsvFile('facturapro-dashboard', ['Indicador', 'Valor', 'Unidad / período'], getDashboardExportRows());
+        }
+
+        function printDashboardPdf() {
+            const report = createPrintDocument('Resumen del dashboard', 'Totales generales y facturación de los últimos seis meses');
+            if (!report) return;
+            appendPrintTable(report.printDocument, report.printDocument.body, ['Indicador', 'Valor', 'Unidad / período'], getDashboardExportRows());
+            launchPrintDialog(report.printWindow);
+        }
+
+        function getPaymentExportRows() {
+            return [
+                ['Contado', 'payment-details-contado'],
+                ['Transferencia Bancaria (ACH)', 'payment-details-ach'],
+                ['Yappy Comercial', 'payment-details-yappy'],
+                ['Efectivo', 'payment-details-efectivo'],
+                ['Tarjeta de Crédito / Débito', 'payment-details-tarjeta'],
+                ['Crédito 15 días', 'payment-details-credito-15'],
+                ['Crédito 30 días', 'payment-details-credito-30']
+            ].map(([method, elementId]) => [method, document.getElementById(elementId).value.trim()]);
+        }
+
+        function downloadPaymentsCsv() {
+            downloadCsvFile('facturapro-configuracion-de-pagos', ['Método de pago', 'Instrucciones'], getPaymentExportRows());
+        }
+
+        function printPaymentsPdf() {
+            const report = createPrintDocument('Configuración de pagos', 'Métodos e instrucciones configurados');
+            if (!report) return;
+            appendPrintTable(report.printDocument, report.printDocument.body, ['Método de pago', 'Instrucciones'], getPaymentExportRows());
+            launchPrintDialog(report.printWindow);
+        }
+
+        function getIssuerExportRows() {
+            return [
+                ['Nombre comercial / razón social', 'issuer-name'],
+                ['RUC', 'issuer-ruc'],
+                ['D.V.', 'issuer-dv'],
+                ['Teléfono', 'issuer-phone'],
+                ['Correo', 'issuer-email'],
+                ['Dirección física', 'issuer-address']
+            ].map(([label, elementId]) => [label, document.getElementById(elementId).value.trim()]);
+        }
+
+        function downloadIssuerCsv() {
+            downloadCsvFile('facturapro-datos-del-emisor', ['Campo', 'Valor'], getIssuerExportRows());
+        }
+
+        function printIssuerPdf() {
+            const report = createPrintDocument('Datos del emisor', 'Información de la empresa configurada en FacturaPRO');
+            if (!report) return;
+            appendPrintTable(report.printDocument, report.printDocument.body, ['Campo', 'Valor'], getIssuerExportRows());
+            launchPrintDialog(report.printWindow);
+        }
+
+        function renderHomeDashboard() {
+            const metrics = calculateFinancialMetrics();
+            document.getElementById('home-invoice-count').textContent = savedInvoices.length.toLocaleString('es-PA');
+            document.getElementById('home-total-billed').textContent = formatUSD(metrics.totalBilled);
+            document.getElementById('home-total-paid').textContent = formatUSD(metrics.totalPaid);
+            document.getElementById('home-paid-count').textContent =
+                `${metrics.countPaid.toLocaleString('es-PA')} factura${metrics.countPaid === 1 ? '' : 's'} pagada${metrics.countPaid === 1 ? '' : 's'}`;
+            document.getElementById('home-total-pending').textContent = formatUSD(metrics.totalPending);
+            document.getElementById('home-pending-count').textContent =
+                `${metrics.countPending.toLocaleString('es-PA')} factura${metrics.countPending === 1 ? '' : 's'} pendiente${metrics.countPending === 1 ? '' : 's'}`;
+
+            const months = getDashboardMonthlyTotals();
 
             const chart = document.getElementById('home-monthly-chart');
             const emptyState = document.getElementById('home-chart-empty');
@@ -2701,6 +3366,10 @@
                     </td>
                     <td class="py-3.5 px-4 text-right">
                         <div class="inline-flex items-center justify-end gap-1.5">
+                            <button onclick="showInvoiceDetails('${inv.id}')" title="Ver detalles completos" aria-label="Ver detalles completos"
+                                class="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            </button>
                             <button onclick="loadInvoiceForEditing('${inv.id}', false)" title="Ajustar / Editar Factura"
                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-600 text-white text-xs font-semibold transition">
                                 <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>

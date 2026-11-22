@@ -15,7 +15,7 @@ const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sessionDurationMs = 8 * 60 * 60 * 1000;
 const configuredSetupToken = process.env.FACTURAPRO_SETUP_TOKEN;
-const setupToken = configuredSetupToken || randomBytes(32).toString('base64url');
+const setupToken = configuredSetupToken || '';
 let setupTokenExpiresAt = process.env.VERCEL === '1' && configuredSetupToken
     ? Number.POSITIVE_INFINITY
     : 0;
@@ -750,14 +750,16 @@ async function startServer() {
         body: { p_attempt_key: '0'.repeat(64) }
     });
     const admin = await getAdmin();
-    if (!admin) setupTokenExpiresAt = Date.now() + 15 * 60 * 1000;
+    if (!admin) {
+        if (!configuredSetupToken) {
+            throw new Error('Configura FACTURAPRO_SETUP_TOKEN en .env (mínimo 32 caracteres) antes de crear la cuenta administradora.');
+        }
+        setupTokenExpiresAt = Date.now() + 15 * 60 * 1000;
+    }
     server = createServer(handleRequest);
     server.listen(port, host, () => {
         console.log(`FacturaPro listo en http://${host}:${port}`);
         console.log('Base de datos: Supabase Postgres');
-        if (!admin) {
-            console.log(`Código de configuración inicial (vence en 15 minutos): ${setupToken}`);
-        }
     });
 }
 
