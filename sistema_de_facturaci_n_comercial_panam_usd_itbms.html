@@ -12,7 +12,211 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f1f5f9;
+            color: #e2e8f0 !important;
+            background-color: #0b1120;
+        }
+
+        #auth-view {
+            background: radial-gradient(circle at top left, #123b36 0, transparent 38%), linear-gradient(135deg, #020617, #0f172a 58%, #111827);
+        }
+        #auth-view > div,
+        #confirm-modal > div {
+            background-color: #111827;
+            border-color: #334155;
+        }
+        #auth-view .text-slate-900,
+        #confirm-modal .text-slate-900 {
+            color: #f8fafc;
+        }
+        #auth-view .text-slate-700,
+        #confirm-modal .text-slate-700 {
+            color: #cbd5e1;
+        }
+        #auth-view .text-slate-500,
+        #confirm-modal .text-slate-500 {
+            color: #94a3b8;
+        }
+        #auth-view button[type="submit"] {
+            background-color: #059669;
+        }
+        #auth-view button[type="submit"]:hover {
+            background-color: #10b981;
+        }
+        #auth-view input,
+        #main-workspace input:not([type="checkbox"]):not([type="radio"]),
+        #main-workspace select,
+        #main-workspace textarea {
+            color: #e2e8f0;
+            background-color: #0b1220;
+            border-color: #475569;
+        }
+        #auth-view input::placeholder,
+        #main-workspace input::placeholder,
+        #main-workspace textarea::placeholder {
+            color: #64748b;
+        }
+        #main-workspace select option {
+            color: #e2e8f0;
+            background-color: #111827;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-white"] {
+            background-color: #111827 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-slate-50"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-slate-50/80"] {
+            background-color: #1e293b !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-slate-100"] {
+            background-color: #273449 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-slate-200"] {
+            background-color: #334155 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-emerald-50"],
+        #auth-view [class~="bg-emerald-50"] {
+            background-color: #052e2b !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-emerald-100"] {
+            background-color: #064e3b !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-blue-50"] {
+            background-color: #172554 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-blue-100"] {
+            background-color: #1e3a8a !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-amber-50"],
+        #confirm-modal [class~="bg-amber-50"] {
+            background-color: #451a03 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-amber-100"] {
+            background-color: #78350f !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-violet-50"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-purple-50"] {
+            background-color: #2e1065 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-violet-100"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-purple-100"] {
+            background-color: #4c1d95 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="bg-rose-50"],
+        #auth-view [class~="bg-rose-50"],
+        #confirm-modal [class~="bg-rose-50"] {
+            background-color: #4c0519 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="border-slate-100"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="border-slate-200"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="border-slate-200/80"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="border-slate-300"],
+        #confirm-modal [class~="border-slate-200"] {
+            border-color: #334155 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-slate-900"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-slate-800"],
+        #auth-view .text-slate-900,
+        #confirm-modal .text-slate-900 {
+            color: #f8fafc !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-slate-700"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-slate-600"],
+        #auth-view .text-slate-700,
+        #confirm-modal .text-slate-700 {
+            color: #cbd5e1 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-slate-500"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-slate-400"],
+        #auth-view .text-slate-500,
+        #confirm-modal .text-slate-500 {
+            color: #94a3b8 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-emerald-700"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-emerald-800"] {
+            color: #6ee7b7 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-emerald-600"],
+        #auth-view .text-emerald-600 {
+            color: #34d399 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-blue-700"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-blue-800"] {
+            color: #93c5fd !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-blue-600"] {
+            color: #60a5fa !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-amber-700"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-amber-800"] {
+            color: #fcd34d !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-amber-600"] {
+            color: #fbbf24 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-violet-700"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-purple-700"] {
+            color: #c4b5fd !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-orange-700"] {
+            color: #fdba74 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-rose-600"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="text-rose-700"],
+        #auth-view .text-rose-700 {
+            color: #fda4af !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="border-emerald-100"] {
+            border-color: #065f46 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="border-rose-100"],
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="border-rose-200"],
+        #auth-view [class~="border-rose-100"] {
+            border-color: #881337 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="divide-slate-100"] > :not([hidden]) ~ :not([hidden]) {
+            border-color: #334155 !important;
+        }
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="hover:bg-slate-50"]:hover,
+        #main-workspace :not(#invoice-paper):not(#invoice-paper *)[class~="hover:bg-slate-100"]:hover {
+            background-color: #334155 !important;
+        }
+        #main-workspace tbody tr:hover {
+            background-color: #1e293b;
+        }
+
+        button {
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        :focus-visible {
+            outline: 3px solid rgb(16 185 129 / 45%);
+            outline-offset: 2px;
+        }
+        input, select, textarea {
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        textarea {
+            resize: vertical;
+        }
+        #main-workspace :where(.flex, .grid) > * {
+            min-width: 0;
+        }
+        #main-workspace tbody tr {
+            transition: background-color 0.15s ease;
+        }
+        #main-workspace tbody tr:hover {
+            background-color: #1e293b;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
 
         /* Estilos personalizados para barras de desplazamiento */
@@ -29,6 +233,22 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
+        }
+        #app-header nav {
+            scrollbar-color: #475569 #1e293b;
+            scrollbar-width: thin;
+        }
+        #app-header nav::-webkit-scrollbar {
+            height: 4px;
+        }
+        #app-header nav::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        #app-header nav::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        #app-header nav::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
         }
 
         /* Animación suave para notificaciones toast */
@@ -191,8 +411,8 @@
 </head>
 <body class="text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
 
-    <section id="auth-view" class="min-h-screen flex items-center justify-center px-4 py-10 bg-slate-900">
-        <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-7 sm:p-9">
+    <section id="auth-view" class="min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-100 via-white to-emerald-50">
+        <div class="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white/95 p-7 shadow-xl sm:p-9">
             <div class="flex items-center gap-3 mb-7">
                 <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-emerald-600">
                     <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
@@ -203,7 +423,7 @@
                 </div>
             </div>
             <h2 id="auth-title" class="text-lg font-bold text-slate-900">Iniciar sesión</h2>
-            <p id="auth-description" class="text-sm text-slate-500 mt-1 mb-6"></p>
+            <p id="auth-description" class="mt-1 mb-6 text-sm leading-relaxed text-slate-500"></p>
             <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
                 <div id="auth-username-group">
                     <label for="auth-username" class="block text-sm font-medium text-slate-700 mb-1">Usuario</label>
@@ -233,56 +453,56 @@
     <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
     <header id="app-header" class="hidden no-print bg-slate-900 text-white sticky top-0 z-40 shadow-md border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-wrap items-center justify-between h-auto py-3 sm:h-16 gap-3">
+            <div class="flex flex-wrap items-center justify-between h-auto min-h-16 py-3 gap-3">
                 <!-- Logo y Marca -->
-                <div class="flex items-center space-x-3">
+                <div class="order-1 flex min-w-0 flex-1 items-center space-x-3 lg:flex-none">
                     <div class="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-xl text-emerald-400">
                         <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-lg tracking-tight text-white">FacturaPro</span>
-                            <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Panamá • USD</span>
+                            <span class="hidden rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300 sm:inline-flex">Panamá • USD</span>
                         </div>
                         <p class="text-xs text-slate-400 hidden sm:block">Gestión Comercial e ITBMS (7%)</p>
                     </div>
                 </div>
 
                 <!-- Navegación entre Módulos -->
-                <nav class="flex max-w-full flex-wrap items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/70">
-                    <button id="tab-btn-home" onclick="switchTab('home')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm">
+                <nav class="order-3 flex w-full max-w-full flex-nowrap items-center overflow-x-auto rounded-xl border border-slate-700/70 bg-slate-800/80 p-1 lg:order-2 lg:w-auto">
+                    <button id="tab-btn-home" onclick="switchTab('home')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm">
                         <i data-lucide="house" class="w-4 h-4"></i>
                         <span>Inicio</span>
                     </button>
-                    <button id="tab-btn-editor" onclick="switchTab('editor')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <button id="tab-btn-editor" onclick="switchTab('editor')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="file-edit" class="w-4 h-4"></i>
                         <span>Generador y Ajustes</span>
                     </button>
-                    <button id="tab-btn-history" onclick="switchTab('history')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <button id="tab-btn-history" onclick="switchTab('history')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="folder-kanban" class="w-4 h-4"></i>
                         <span>Historial y Facturas</span>
                         <span id="history-count-badge" class="ml-1 bg-slate-700 text-slate-200 text-xs px-2 py-0.5 rounded-full">0</span>
                     </button>
-                    <button id="tab-btn-clients" onclick="switchTab('clients')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <button id="tab-btn-clients" onclick="switchTab('clients')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="users-round" class="w-4 h-4"></i>
                         <span>Clientes</span>
                     </button>
-                    <button id="tab-btn-reports" onclick="switchTab('reports')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <button id="tab-btn-reports" onclick="switchTab('reports')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="chart-no-axes-combined" class="w-4 h-4"></i>
                         <span>Reportes</span>
                     </button>
-                    <button id="tab-btn-receivables" onclick="switchTab('receivables')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <button id="tab-btn-receivables" onclick="switchTab('receivables')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="calendar-clock" class="w-4 h-4"></i>
                         <span>Por cobrar</span>
                     </button>
-                    <button id="tab-btn-payments" onclick="switchTab('payments')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <button id="tab-btn-payments" onclick="switchTab('payments')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="credit-card" class="w-4 h-4"></i>
                         <span>Pagos</span>
                     </button>
                 </nav>
 
                 <!-- Acciones Rápidas Globales -->
-                <div class="flex items-center gap-2">
+                <div class="order-2 flex shrink-0 items-center gap-2 lg:order-3">
                     <button onclick="logout()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors" title="Cerrar sesión">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                         <span class="hidden md:inline">Salir</span>
@@ -855,7 +1075,7 @@
             </div>
 
             <!-- COLUMNA DERECHA: VISTA PREVIA EN TIEMPO REAL DE LA FACTURA (6 cols en lg) -->
-            <div id="preview-container" class="lg:col-span-6 lg:sticky lg:top-20">
+            <div id="preview-container" class="lg:col-span-6">
                 <div class="no-print flex items-center justify-between mb-3 px-1">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
