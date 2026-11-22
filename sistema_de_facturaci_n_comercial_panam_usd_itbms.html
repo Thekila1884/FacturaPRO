@@ -249,7 +249,7 @@
                 </div>
 
                 <!-- Navegación entre Módulos -->
-                <nav class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/70">
+                <nav class="flex max-w-full flex-wrap items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/70">
                     <button id="tab-btn-home" onclick="switchTab('home')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm">
                         <i data-lucide="house" class="w-4 h-4"></i>
                         <span>Inicio</span>
@@ -262,6 +262,18 @@
                         <i data-lucide="folder-kanban" class="w-4 h-4"></i>
                         <span>Historial y Facturas</span>
                         <span id="history-count-badge" class="ml-1 bg-slate-700 text-slate-200 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </button>
+                    <button id="tab-btn-clients" onclick="switchTab('clients')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                        <i data-lucide="users-round" class="w-4 h-4"></i>
+                        <span>Clientes</span>
+                    </button>
+                    <button id="tab-btn-reports" onclick="switchTab('reports')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                        <i data-lucide="chart-no-axes-combined" class="w-4 h-4"></i>
+                        <span>Reportes</span>
+                    </button>
+                    <button id="tab-btn-receivables" onclick="switchTab('receivables')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                        <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+                        <span>Por cobrar</span>
                     </button>
                     <button id="tab-btn-payments" onclick="switchTab('payments')" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
                         <i data-lucide="credit-card" class="w-4 h-4"></i>
@@ -364,6 +376,30 @@
                         <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
                     </button>
 
+                    <button type="button" onclick="switchTab('clients')" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md">
+                        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-700 transition group-hover:bg-violet-600 group-hover:text-white">
+                            <i data-lucide="users-round" class="h-6 w-6"></i>
+                        </span>
+                        <span class="block text-lg font-bold text-slate-900">Clientes</span>
+                        <span class="mt-2 block text-sm leading-relaxed text-slate-500">Guardar los datos de tus clientes y reutilizarlos en nuevas facturas.</span>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-violet-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+                    </button>
+                    <button type="button" onclick="switchTab('reports')" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md">
+                        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-blue-600 group-hover:text-white">
+                            <i data-lucide="chart-no-axes-combined" class="h-6 w-6"></i>
+                        </span>
+                        <span class="block text-lg font-bold text-slate-900">Reportes</span>
+                        <span class="mt-2 block text-sm leading-relaxed text-slate-500">Analizar facturas por fecha y estado, y exportar resultados a CSV.</span>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+                    </button>
+                    <button type="button" onclick="switchTab('receivables')" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md">
+                        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-700 transition group-hover:bg-amber-600 group-hover:text-white">
+                            <i data-lucide="calendar-clock" class="h-6 w-6"></i>
+                        </span>
+                        <span class="block text-lg font-bold text-slate-900">Cuentas por cobrar</span>
+                        <span class="mt-2 block text-sm leading-relaxed text-slate-500">Ver saldos pendientes, vencimientos y días de atraso.</span>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-amber-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+                    </button>
                     <button type="button" onclick="switchTab('payments')" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md">
                         <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-700 transition group-hover:bg-violet-600 group-hover:text-white">
                             <i data-lucide="credit-card" class="h-6 w-6"></i>
@@ -374,6 +410,127 @@
                     </button>
                 </div>
             </div>
+        </section>
+
+        <section id="clients-view" class="hidden space-y-6">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Catálogo de clientes</h1>
+                <p class="mt-2 text-sm text-slate-500">Guarda los datos una vez y selecciónalos al preparar futuras facturas.</p>
+            </div>
+
+            <form id="client-catalog-form" onsubmit="saveCatalogClient(event)" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <input type="hidden" id="catalog-client-id">
+                <h2 id="client-form-title" class="mb-4 text-base font-bold text-slate-900">Agregar cliente</h2>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div class="sm:col-span-3">
+                        <label for="catalog-client-name" class="mb-1 block text-xs font-semibold text-slate-700">Nombre / Razón Social *</label>
+                        <input id="catalog-client-name" required maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="catalog-client-ruc" class="mb-1 block text-xs font-semibold text-slate-700">RUC / Cédula / Pasaporte</label>
+                        <input id="catalog-client-ruc" maxlength="100" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+                    <div>
+                        <label for="catalog-client-dv" class="mb-1 block text-xs font-semibold text-slate-700">D.V.</label>
+                        <input id="catalog-client-dv" maxlength="10" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+                    <div>
+                        <label for="catalog-client-phone" class="mb-1 block text-xs font-semibold text-slate-700">Teléfono</label>
+                        <input id="catalog-client-phone" maxlength="100" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="catalog-client-email" class="mb-1 block text-xs font-semibold text-slate-700">Correo Electrónico</label>
+                        <input id="catalog-client-email" type="email" maxlength="254" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label for="catalog-client-address" class="mb-1 block text-xs font-semibold text-slate-700">Dirección</label>
+                        <input id="catalog-client-address" maxlength="500" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button id="client-form-submit" type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">Guardar cliente</button>
+                    <button id="client-form-cancel" type="button" onclick="resetCatalogClientForm()" class="hidden rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
+                </div>
+            </form>
+
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">
+                    <div>
+                        <h2 class="font-bold text-slate-900">Clientes guardados</h2>
+                        <p id="client-catalog-count" class="mt-1 text-xs text-slate-500">0 clientes</p>
+                    </div>
+                    <input id="client-catalog-search" type="search" oninput="renderClientCatalog()" placeholder="Buscar cliente..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 sm:w-64">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[700px] text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                            <tr><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Identificación</th><th class="px-4 py-3">Contacto</th><th class="px-4 py-3 text-right">Acciones</th></tr>
+                        </thead>
+                        <tbody id="client-catalog-tbody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <p id="client-catalog-empty" class="hidden p-8 text-center text-sm text-slate-500">No hay clientes que coincidan con la búsqueda.</p>
+            </section>
+        </section>
+
+        <section id="reports-view" class="hidden space-y-6">
+            <div class="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Reportes de facturación</h1>
+                    <p class="mt-2 text-sm text-slate-500">Filtra las facturas por período y estado, y exporta el resultado a CSV.</p>
+                </div>
+                <button type="button" onclick="downloadReportCsv()" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500">
+                    <i data-lucide="download" class="h-4 w-4"></i> Descargar CSV
+                </button>
+            </div>
+            <div class="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-4">
+                <div><label for="report-date-from" class="mb-1 block text-xs font-semibold text-slate-600">Desde</label><input id="report-date-from" type="date" onchange="renderReports()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></div>
+                <div><label for="report-date-to" class="mb-1 block text-xs font-semibold text-slate-600">Hasta</label><input id="report-date-to" type="date" onchange="renderReports()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></div>
+                <div><label for="report-status" class="mb-1 block text-xs font-semibold text-slate-600">Estado</label><select id="report-status" onchange="renderReports()" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"><option value="ALL">Todos</option><option value="Pendiente">Pendiente</option><option value="Pagada">Pagada</option><option value="Anulada">Anulada</option></select></div>
+                <div class="flex items-end"><button type="button" onclick="resetReportFilters()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Este año</button></div>
+            </div>
+            <p id="report-filter-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert"></p>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">Facturas</p><p id="report-invoice-count" class="mt-2 text-2xl font-extrabold text-slate-900">0</p></article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">Total válido</p><p id="report-total" class="mt-2 text-2xl font-extrabold text-emerald-700">$0.00</p><p class="mt-1 text-xs text-slate-500">Excluye anuladas</p></article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">ITBMS válido</p><p id="report-itbms" class="mt-2 text-2xl font-extrabold text-blue-700">$0.00</p><p class="mt-1 text-xs text-slate-500">Excluye anuladas</p></article>
+            </div>
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[850px] text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Factura</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Pago</th><th class="px-4 py-3 text-right">ITBMS</th><th class="px-4 py-3 text-right">Total</th></tr></thead>
+                        <tbody id="report-tbody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <p id="report-empty" class="hidden p-8 text-center text-sm text-slate-500">No hay facturas para los filtros seleccionados.</p>
+            </section>
+        </section>
+
+        <section id="receivables-view" class="hidden space-y-6">
+            <div class="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Cuentas por cobrar</h1>
+                    <p class="mt-2 text-sm text-slate-500">Saldos de facturas pendientes agrupados por fecha de vencimiento.</p>
+                </div>
+                <div><label for="receivables-as-of" class="mb-1 block text-xs font-semibold text-slate-600">Calcular al</label><input id="receivables-as-of" type="date" onchange="renderReceivables()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">No vencidas</p><p id="receivable-current" class="mt-2 text-xl font-extrabold text-emerald-700">$0.00</p></article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">1–30 días</p><p id="receivable-1-30" class="mt-2 text-xl font-extrabold text-amber-700">$0.00</p></article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">31–60 días</p><p id="receivable-31-60" class="mt-2 text-xl font-extrabold text-orange-700">$0.00</p></article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">Más de 60</p><p id="receivable-over-60" class="mt-2 text-xl font-extrabold text-rose-700">$0.00</p></article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">Sin vencimiento</p><p id="receivable-no-date" class="mt-2 text-xl font-extrabold text-slate-600">$0.00</p></article>
+                <article class="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:col-span-1"><p class="text-xs font-semibold uppercase text-slate-500">Total pendiente</p><p id="receivable-total" class="mt-2 text-xl font-extrabold text-slate-900">$0.00</p><p id="receivable-count" class="mt-1 text-xs text-slate-500">0 facturas</p></article>
+            </div>
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[750px] text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3">Vencimiento</th><th class="px-4 py-3">Factura</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Atraso</th><th class="px-4 py-3 text-right">Saldo</th><th class="px-4 py-3 text-right">Acción</th></tr></thead>
+                        <tbody id="receivables-tbody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <p id="receivables-empty" class="hidden p-8 text-center text-sm text-slate-500">No hay facturas pendientes de cobro.</p>
+            </section>
         </section>
 
         <section id="payments-view" class="hidden space-y-6">
@@ -579,6 +736,12 @@
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div class="sm:col-span-3">
+                            <label for="client-catalog-select" class="block text-xs font-semibold text-slate-700 mb-1">Usar cliente guardado</label>
+                            <select id="client-catalog-select" onchange="useCatalogClient(this.value)" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-800 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
+                                <option value="">Selecciona un cliente guardado</option>
+                            </select>
+                        </div>
                         <div class="sm:col-span-3">
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre / Razón Social del Cliente *</label>
                             <input type="text" id="client-name" oninput="updatePreview()" placeholder="Ej. Corporación Logística del Istmo, S.A." class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
@@ -969,8 +1132,10 @@
         const DEFAULT_PAYMENT_DETAILS = Object.fromEntries(PAYMENT_METHODS.map(({ value }) => [value, '']));
 
         let currentEditingId = null; // null = factura nueva, string = ID de factura guardada en edición
+        let currentEditingClientId = null;
         let invoiceItems = [];       // Lista de ítems actuales en el formulario
         let savedInvoices = [];      // Historial cargado desde el servidor
+        let savedClients = [];
         let authMode = 'login';
         let issuerSaveTimer = null;
 
@@ -1083,6 +1248,7 @@
 
         async function enterApplication() {
             const data = await apiRequest('/api/bootstrap');
+            const clientData = await apiRequest('/api/clients');
             const legacyIssuer = localStorage.getItem(LEGACY_STORAGE_KEYS.ISSUER);
             const legacyInvoices = localStorage.getItem(LEGACY_STORAGE_KEYS.INVOICES);
             let issuer = data.issuer;
@@ -1107,7 +1273,11 @@
                 }
             }
             savedInvoices = invoices;
+            savedClients = clientData.clients;
             loadIssuerData(issuer);
+            renderClientSelect();
+            renderClientCatalog();
+            resetReportFilters();
             document.getElementById('auth-view').classList.add('hidden');
             document.getElementById('app-header').classList.remove('hidden');
             document.getElementById('main-workspace').classList.remove('hidden');
@@ -1533,6 +1703,7 @@
         // =========================================================================
         function createNewInvoice(notify = true) {
             currentEditingId = null;
+            document.getElementById('client-catalog-select').value = '';
             document.getElementById('editing-banner').classList.add('hidden');
             document.getElementById('save-btn-label').textContent = 'Guardar Factura';
 
@@ -1651,6 +1822,11 @@
             document.getElementById('client-phone').value = inv.client.phone || '';
             document.getElementById('client-email').value = inv.client.email || '';
             document.getElementById('client-address').value = inv.client.address || '';
+            const matchingClient = savedClients.find(client =>
+                client.name === (inv.client.name || '') &&
+                client.ruc === (inv.client.ruc || '') &&
+                client.email === (inv.client.email || ''));
+            document.getElementById('client-catalog-select').value = matchingClient?.id || '';
 
             document.getElementById('discount-type').value = inv.discountType || 'none';
             document.getElementById('discount-value').value = inv.discountValue || 0;
@@ -1687,6 +1863,9 @@
                 });
                 savedInvoices[idx] = result.invoice;
                 renderHistoryTable();
+                if (!document.getElementById('home-view').classList.contains('hidden')) renderHomeDashboard();
+                if (!document.getElementById('reports-view').classList.contains('hidden')) renderReports();
+                if (!document.getElementById('receivables-view').classList.contains('hidden')) renderReceivables();
 
                 // Si está abierta en el editor, sincronizar también
                 if (currentEditingId === id) {
@@ -1735,6 +1914,7 @@
             const modal = document.getElementById('confirm-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            document.getElementById('confirm-modal-btn').textContent = 'Eliminar';
         }
 
         // =========================================================================
@@ -1742,6 +1922,332 @@
         // =========================================================================
         function updateHistoryBadge() {
             document.getElementById('history-count-badge').textContent = savedInvoices.length;
+        }
+
+        function renderClientSelect() {
+            const select = document.getElementById('client-catalog-select');
+            const selectedId = select.value;
+            select.replaceChildren(new Option('Selecciona un cliente guardado', ''));
+            savedClients
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+                .forEach(client => {
+                    const option = new Option(client.name, client.id);
+                    option.title = client.ruc || client.email || '';
+                    select.appendChild(option);
+                });
+            if (savedClients.some(client => client.id === selectedId)) select.value = selectedId;
+        }
+
+        function useCatalogClient(id) {
+            const client = savedClients.find(item => item.id === id);
+            if (!client) return;
+            document.getElementById('client-name').value = client.name;
+            document.getElementById('client-ruc').value = client.ruc;
+            document.getElementById('client-dv').value = client.dv;
+            document.getElementById('client-phone').value = client.phone;
+            document.getElementById('client-email').value = client.email;
+            document.getElementById('client-address').value = client.address;
+            updatePreview();
+        }
+
+        function resetCatalogClientForm() {
+            currentEditingClientId = null;
+            document.getElementById('client-catalog-form').reset();
+            document.getElementById('catalog-client-id').value = '';
+            document.getElementById('client-form-title').textContent = 'Agregar cliente';
+            document.getElementById('client-form-submit').textContent = 'Guardar cliente';
+            document.getElementById('client-form-cancel').classList.add('hidden');
+        }
+
+        async function saveCatalogClient(event) {
+            event.preventDefault();
+            const submit = document.getElementById('client-form-submit');
+            const id = currentEditingClientId || crypto.randomUUID();
+            const client = {
+                id,
+                name: document.getElementById('catalog-client-name').value.trim(),
+                ruc: document.getElementById('catalog-client-ruc').value.trim(),
+                dv: document.getElementById('catalog-client-dv').value.trim(),
+                phone: document.getElementById('catalog-client-phone').value.trim(),
+                email: document.getElementById('catalog-client-email').value.trim(),
+                address: document.getElementById('catalog-client-address').value.trim()
+            };
+            submit.disabled = true;
+            try {
+                const result = await apiRequest('/api/clients', {
+                    method: 'PUT',
+                    body: JSON.stringify({ client })
+                });
+                savedClients = savedClients.filter(item => item.id !== result.client.id).concat(result.client);
+                renderClientSelect();
+                renderClientCatalog();
+                resetCatalogClientForm();
+                showToast('Cliente guardado correctamente', 'success');
+            } catch (error) {
+                showToast(`No se pudo guardar el cliente: ${error.message}`, 'error');
+            } finally {
+                submit.disabled = false;
+            }
+        }
+
+        function editCatalogClient(id) {
+            const client = savedClients.find(item => item.id === id);
+            if (!client) return;
+            currentEditingClientId = client.id;
+            document.getElementById('catalog-client-id').value = client.id;
+            document.getElementById('catalog-client-name').value = client.name;
+            document.getElementById('catalog-client-ruc').value = client.ruc;
+            document.getElementById('catalog-client-dv').value = client.dv;
+            document.getElementById('catalog-client-phone').value = client.phone;
+            document.getElementById('catalog-client-email').value = client.email;
+            document.getElementById('catalog-client-address').value = client.address;
+            document.getElementById('client-form-title').textContent = 'Editar cliente';
+            document.getElementById('client-form-submit').textContent = 'Guardar cambios';
+            document.getElementById('client-form-cancel').classList.remove('hidden');
+            document.getElementById('catalog-client-name').focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderClientCatalog() {
+            const query = document.getElementById('client-catalog-search').value.trim().toLocaleLowerCase('es');
+            const clients = savedClients
+                .filter(client => [client.name, client.ruc, client.dv, client.phone, client.email, client.address]
+                    .some(value => value.toLocaleLowerCase('es').includes(query)))
+                .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+            const tbody = document.getElementById('client-catalog-tbody');
+            tbody.replaceChildren();
+            document.getElementById('client-catalog-count').textContent =
+                `${savedClients.length.toLocaleString('es-PA')} cliente${savedClients.length === 1 ? '' : 's'} guardado${savedClients.length === 1 ? '' : 's'}`;
+            document.getElementById('client-catalog-empty').classList.toggle('hidden', clients.length > 0);
+
+            clients.forEach(client => {
+                const row = document.createElement('tr');
+                const nameCell = document.createElement('td');
+                nameCell.className = 'px-4 py-3 font-semibold text-slate-800';
+                nameCell.textContent = client.name;
+                const idCell = document.createElement('td');
+                idCell.className = 'px-4 py-3 text-slate-600';
+                idCell.textContent = [client.ruc, client.dv ? `DV: ${client.dv}` : ''].filter(Boolean).join(' • ') || '—';
+                const contactCell = document.createElement('td');
+                contactCell.className = 'px-4 py-3 text-slate-600';
+                contactCell.textContent = [client.phone, client.email].filter(Boolean).join(' • ') || '—';
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'px-4 py-3 text-right';
+                const actions = document.createElement('div');
+                actions.className = 'inline-flex gap-2';
+                [
+                    ['Usar', () => useCatalogClientAndOpen(client.id), 'bg-emerald-600 text-white hover:bg-emerald-500'],
+                    ['Editar', () => editCatalogClient(client.id), 'border border-slate-300 text-slate-700 hover:bg-slate-50'],
+                    ['Eliminar', () => requestDeleteCatalogClient(client.id), 'border border-rose-200 text-rose-700 hover:bg-rose-50']
+                ].forEach(([label, action, classes]) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = `rounded-lg px-2.5 py-1.5 text-xs font-semibold ${classes}`;
+                    button.textContent = label;
+                    button.addEventListener('click', action);
+                    actions.appendChild(button);
+                });
+                actionsCell.appendChild(actions);
+                row.append(nameCell, idCell, contactCell, actionsCell);
+                tbody.appendChild(row);
+            });
+        }
+
+        function useCatalogClientAndOpen(id) {
+            switchTab('editor');
+            document.getElementById('client-catalog-select').value = id;
+            useCatalogClient(id);
+        }
+
+        function requestDeleteCatalogClient(id) {
+            const client = savedClients.find(item => item.id === id);
+            if (!client) return;
+            document.getElementById('confirm-modal-title').textContent = `Eliminar cliente ${client.name}`;
+            document.getElementById('confirm-modal-message').textContent =
+                'Se quitará del catálogo. Las facturas ya guardadas conservarán los datos del cliente.';
+            const confirmButton = document.getElementById('confirm-modal-btn');
+            confirmButton.textContent = 'Eliminar cliente';
+            confirmButton.onclick = async () => {
+                confirmButton.disabled = true;
+                try {
+                    await apiRequest(`/api/clients/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    savedClients = savedClients.filter(item => item.id !== id);
+                    if (currentEditingClientId === id) resetCatalogClientForm();
+                    renderClientSelect();
+                    renderClientCatalog();
+                    closeConfirmModal();
+                    showToast('Cliente eliminado del catálogo', 'success');
+                } catch (error) {
+                    showToast(`No se pudo eliminar el cliente: ${error.message}`, 'error');
+                } finally {
+                    confirmButton.disabled = false;
+                }
+            };
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            document.getElementById('confirm-modal').classList.add('flex');
+        }
+
+        function resetReportFilters() {
+            const today = getTodayISO();
+            document.getElementById('report-date-from').value = `${today.slice(0, 4)}-01-01`;
+            document.getElementById('report-date-to').value = today;
+            document.getElementById('report-status').value = 'ALL';
+            renderReports();
+        }
+
+        function getReportInvoices() {
+            const from = document.getElementById('report-date-from').value;
+            const to = document.getElementById('report-date-to').value;
+            const status = document.getElementById('report-status').value;
+            const error = from && to && from > to ? 'La fecha inicial no puede ser posterior a la fecha final.' : '';
+            document.getElementById('report-filter-error').textContent = error;
+            document.getElementById('report-filter-error').classList.toggle('hidden', !error);
+            if (error) return [];
+            return savedInvoices.filter(invoice => {
+                const date = typeof invoice.date === 'string' ? invoice.date.slice(0, 10) : '';
+                return (!from || (date && date >= from)) &&
+                    (!to || (date && date <= to)) &&
+                    (status === 'ALL' || invoice.status === status);
+            }).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        }
+
+        function renderReports() {
+            const invoices = getReportInvoices();
+            const validInvoices = invoices.filter(invoice => invoice.status !== 'Anulada');
+            const total = validInvoices.reduce((sum, invoice) => sum + (Number(invoice.totals?.grandTotal) || 0), 0);
+            const itbms = validInvoices.reduce((sum, invoice) => sum + (Number(invoice.totals?.itbms) || 0), 0);
+            document.getElementById('report-invoice-count').textContent = invoices.length.toLocaleString('es-PA');
+            document.getElementById('report-total').textContent = formatUSD(total);
+            document.getElementById('report-itbms').textContent = formatUSD(itbms);
+            const tbody = document.getElementById('report-tbody');
+            tbody.replaceChildren();
+            document.getElementById('report-empty').classList.toggle('hidden', invoices.length > 0);
+
+            invoices.forEach(invoice => {
+                const row = document.createElement('tr');
+                [
+                    formatDateReadable(invoice.date),
+                    invoice.number,
+                    invoice.client?.name || 'Cliente General',
+                    invoice.status,
+                    invoice.paymentTerms || 'Contado',
+                    formatUSD(invoice.totals?.itbms || 0),
+                    formatUSD(invoice.totals?.grandTotal || 0)
+                ].forEach((value, index) => {
+                    const cell = document.createElement('td');
+                    cell.className = `px-4 py-3 text-slate-700${index >= 5 ? ' text-right font-medium' : ''}`;
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        function csvCell(value) {
+            let text = String(value ?? '');
+            if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
+            return `"${text.replace(/"/g, '""')}"`;
+        }
+
+        function downloadReportCsv() {
+            if (document.getElementById('report-filter-error').textContent) {
+                showToast('Corrige el rango de fechas antes de exportar.', 'error');
+                return;
+            }
+            const rows = [
+                ['Fecha', 'Vencimiento', 'Factura', 'Cliente', 'RUC / ID', 'Estado', 'Método de pago', 'Subtotal', 'ITBMS', 'Total'],
+                ...getReportInvoices().map(invoice => [
+                    invoice.date || '',
+                    invoice.dueDate || '',
+                    invoice.number,
+                    invoice.client?.name || 'Cliente General',
+                    invoice.client?.ruc || '',
+                    invoice.status,
+                    invoice.paymentTerms || 'Contado',
+                    Number(invoice.totals?.subtotal || 0).toFixed(2),
+                    Number(invoice.totals?.itbms || 0).toFixed(2),
+                    Number(invoice.totals?.grandTotal || 0).toFixed(2)
+                ])
+            ];
+            const csv = `\uFEFF${rows.map(row => row.map(csvCell).join(',')).join('\r\n')}`;
+            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `facturapro-reporte-${document.getElementById('report-date-from').value || 'inicio'}-${document.getElementById('report-date-to').value || 'hoy'}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function renderReceivables() {
+            const asOf = document.getElementById('receivables-as-of').value || getTodayISO();
+            const asOfTime = Date.parse(`${asOf}T00:00:00Z`);
+            const buckets = { current: 0, days1to30: 0, days31to60: 0, over60: 0, noDueDate: 0 };
+            const pendingInvoices = savedInvoices.filter(invoice => invoice.status === 'Pendiente');
+            const rows = pendingInvoices.map(invoice => {
+                const dueDate = typeof invoice.dueDate === 'string' ? invoice.dueDate.slice(0, 10) : '';
+                const dueTime = /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? Date.parse(`${dueDate}T00:00:00Z`) : NaN;
+                const daysLate = Number.isFinite(dueTime) ? Math.max(0, Math.floor((asOfTime - dueTime) / 86_400_000)) : null;
+                const amount = Number(invoice.totals?.grandTotal) || 0;
+                if (daysLate === null) buckets.noDueDate += amount;
+                else if (daysLate === 0) buckets.current += amount;
+                else if (daysLate <= 30) buckets.days1to30 += amount;
+                else if (daysLate <= 60) buckets.days31to60 += amount;
+                else buckets.over60 += amount;
+                return { invoice, dueDate, daysLate, amount };
+            }).sort((a, b) => {
+                if (a.daysLate === null) return b.daysLate === null ? 0 : 1;
+                if (b.daysLate === null) return -1;
+                return b.daysLate - a.daysLate;
+            });
+
+            document.getElementById('receivable-current').textContent = formatUSD(buckets.current);
+            document.getElementById('receivable-1-30').textContent = formatUSD(buckets.days1to30);
+            document.getElementById('receivable-31-60').textContent = formatUSD(buckets.days31to60);
+            document.getElementById('receivable-over-60').textContent = formatUSD(buckets.over60);
+            document.getElementById('receivable-no-date').textContent = formatUSD(buckets.noDueDate);
+            document.getElementById('receivable-total').textContent = formatUSD(rows.reduce((sum, row) => sum + row.amount, 0));
+            document.getElementById('receivable-count').textContent =
+                `${rows.length.toLocaleString('es-PA')} factura${rows.length === 1 ? '' : 's'} pendiente${rows.length === 1 ? '' : 's'}`;
+            document.getElementById('receivables-empty').classList.toggle('hidden', rows.length > 0);
+
+            const tbody = document.getElementById('receivables-tbody');
+            tbody.replaceChildren();
+            rows.forEach(({ invoice, dueDate, daysLate, amount }) => {
+                const row = document.createElement('tr');
+                const values = [
+                    dueDate ? formatDateReadable(dueDate) : 'Sin fecha',
+                    invoice.number,
+                    invoice.client?.name || 'Cliente General',
+                    daysLate === null ? 'Sin fecha de vencimiento' : daysLate > 0 ? `${daysLate} día${daysLate === 1 ? '' : 's'} vencida` : 'Al día'
+                ];
+                values.forEach(value => {
+                    const cell = document.createElement('td');
+                    cell.className = 'px-4 py-3 text-slate-700';
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+                const amountCell = document.createElement('td');
+                amountCell.className = 'px-4 py-3 text-right font-semibold text-slate-900';
+                amountCell.textContent = formatUSD(amount);
+                const actionCell = document.createElement('td');
+                actionCell.className = 'px-4 py-3 text-right';
+                const editButton = document.createElement('button');
+                editButton.type = 'button';
+                editButton.className = 'rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600';
+                editButton.textContent = 'Abrir factura';
+                editButton.addEventListener('click', () => loadInvoiceForEditing(invoice.id));
+                const paidButton = document.createElement('button');
+                paidButton.type = 'button';
+                paidButton.className = 'ml-1 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50';
+                paidButton.textContent = 'Marcar pagada';
+                paidButton.addEventListener('click', () => quickToggleStatus(invoice.id));
+                actionCell.append(editButton, paidButton);
+                row.append(amountCell, actionCell);
+                tbody.appendChild(row);
+            });
         }
 
         function calculateFinancialMetrics() {
@@ -1932,12 +2438,18 @@
                 home: document.getElementById('home-view'),
                 editor: document.getElementById('editor-view'),
                 history: document.getElementById('history-view'),
+                clients: document.getElementById('clients-view'),
+                reports: document.getElementById('reports-view'),
+                receivables: document.getElementById('receivables-view'),
                 payments: document.getElementById('payments-view')
             };
             const buttons = {
                 home: document.getElementById('tab-btn-home'),
                 editor: document.getElementById('tab-btn-editor'),
                 history: document.getElementById('tab-btn-history'),
+                clients: document.getElementById('tab-btn-clients'),
+                reports: document.getElementById('tab-btn-reports'),
+                receivables: document.getElementById('tab-btn-receivables'),
                 payments: document.getElementById('tab-btn-payments')
             };
             const activeClasses = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm';
@@ -1953,6 +2465,15 @@
                 renderHomeDashboard();
             } else if (tabName === 'history') {
                 renderHistoryTable();
+            } else if (tabName === 'clients') {
+                renderClientCatalog();
+            } else if (tabName === 'reports') {
+                renderReports();
+            } else if (tabName === 'receivables') {
+                if (!document.getElementById('receivables-as-of').value) {
+                    document.getElementById('receivables-as-of').value = getTodayISO();
+                }
+                renderReceivables();
             }
             lucide.createIcons();
         }

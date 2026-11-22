@@ -36,6 +36,7 @@ function rowMatches(row, url) {
         if (['select', 'order', 'limit', 'offset', 'on_conflict'].includes(key)) return true;
         if (filter.startsWith('eq.')) return String(row[key]) === filter.slice(3);
         if (filter.startsWith('lt.')) return String(row[key]) < filter.slice(3);
+        if (filter.startsWith('like.')) return String(row[key]).startsWith(filter.slice(5).replace(/[%*]$/, ''));
         return false;
     });
 }
@@ -227,6 +228,7 @@ test('build creates the Vercel public output directory with app assets', async (
 test('admin authentication protects Supabase-backed invoice operations', async () => {
     assert.deepEqual(await api('/api/auth/status'), { setupRequired: true, authenticated: false });
     await api('/api/bootstrap', { expected: 401 });
+    await api('/api/clients', { expected: 401 });
     await api('/api/auth/setup', {
         method: 'POST',
         body: { username: 'admin', password: 'Correct-Horse-Battery-1' },
@@ -288,6 +290,40 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     assert.equal(serverlessResponse.statusCode, 200);
     assert.match(serverlessResponse.headers['Set-Cookie'], /;\s*Secure(?:;|$)/);
 
+    assert.deepEqual((await api('/api/clients')).clients, []);
+    const clients = [{
+        id: 'client-1',
+        name: 'Cliente de prueba',
+        ruc: '123456-1-123',
+        dv: '12',
+        phone: '+507 6000-0000',
+        email: 'cliente@example.com',
+        address: 'Ciudad de Panamá'
+    }];
+    assert.deepEqual((await api('/api/clients', {
+        method: 'PUT',
+        body: { client: clients[0] }
+    })).client, clients[0]);
+    assert.deepEqual((await api('/api/clients')).clients, clients);
+    const updatedClient = { ...clients[0], phone: '+507 6999-0000' };
+    assert.deepEqual((await api('/api/clients', {
+        method: 'PUT',
+        body: { client: updatedClient }
+    })).client, updatedClient);
+    const secondClient = { ...clients[0], id: 'client-2', name: 'Segundo cliente', email: 'segundo@example.com' };
+    await api('/api/clients', { method: 'PUT', body: { client: secondClient } });
+    assert.deepEqual((await api('/api/clients')).clients, [updatedClient, secondClient]);
+    await api('/api/clients', {
+        method: 'PUT',
+        body: { client: { ...updatedClient, email: 'correo-invalido' } },
+        expected: 400
+    });
+    assert.deepEqual((await api('/api/clients')).clients, [updatedClient, secondClient]);
+    await api('/api/clients/client-1', { method: 'DELETE' });
+    assert.deepEqual((await api('/api/clients')).clients, [secondClient]);
+    await api('/api/clients/client-1', { method: 'DELETE', expected: 404 });
+    await api('/api/clients/client-2', { method: 'DELETE' });
+
     const issuer = await api('/api/settings/issuer', {
         method: 'PUT',
         body: { name: 'Empresa de prueba', achDetails: 'Banco y cuenta ACH de prueba' }
@@ -330,6 +366,11 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     };
     const saved = await api('/api/invoices', { method: 'POST', body: invoice, expected: 201 });
     assert.equal(saved.invoice.totals.grandTotal, 107);
+    await api('/api/invoices', {
+        method: 'POST',
+        body: { ...invoice, id: 'invalid-date-invoice', dueDate: '2026-02-31' },
+        expected: 400
+    });
     assert.equal((await api('/api/invoices/test-invoice/status', {
         method: 'PATCH',
         body: { status: 'Pagada' }

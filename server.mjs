@@ -177,6 +177,19 @@ function validateInvoice(input) {
     const number = typeof input.number === 'string' ? input.number.trim() : '';
     if (!number || number.length > 100) fail('Ingresa un número de factura de hasta 100 caracteres.');
     if (!['Pendiente', 'Pagada', 'Anulada'].includes(input.status)) fail('El estado de la factura no es válido.');
+    const dateField = (value, label) => {
+        if (value === undefined || value === null || value === '') return '';
+        if (typeof value !== 'string' || value.length > 30) fail(`La fecha de ${label} no es válida.`);
+        const date = value.slice(0, 10);
+        const timestamp = Date.parse(`${date}T00:00:00Z`);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(timestamp) ||
+            new Date(timestamp).toISOString().slice(0, 10) !== date) {
+            fail(`La fecha de ${label} no es válida.`);
+        }
+        return date;
+    };
+    const date = dateField(input.date, 'emisión');
+    const dueDate = dateField(input.dueDate, 'vencimiento');
     if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 200) fail('La factura debe tener entre 1 y 200 líneas.');
     const items = input.items.map(item => {
         if (!item || typeof item !== 'object' || typeof item.description !== 'string' ||
@@ -226,8 +239,8 @@ function validateInvoice(input) {
             : randomBytes(16).toString('hex'),
         number,
         status: input.status,
-        date: typeof input.date === 'string' ? input.date.slice(0, 10) : '',
-        dueDate: typeof input.dueDate === 'string' ? input.dueDate.slice(0, 10) : '',
+        date,
+        dueDate,
         paymentTerms: typeof input.paymentTerms === 'string' ? input.paymentTerms.slice(0, 200) : 'Contado',
         client,
         items,
@@ -244,6 +257,50 @@ function validateInvoice(input) {
         },
         updatedAt: new Date().toISOString()
     };
+}
+
+function validateClients(input) {
+    const fail = message => {
+        const error = new Error(message);
+        error.status = 400;
+        throw error;
+    };
+    if (!Array.isArray(input) || input.length > 5000) {
+        fail('El catálogo de clientes no es válido.');
+    }
+
+    const ids = new Set();
+    return input.map(client => {
+        if (!client || typeof client !== 'object' || Array.isArray(client)) {
+            fail('Los datos de un cliente no son válidos.');
+        }
+        const id = typeof client.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(client.id)
+            ? client.id
+            : randomBytes(16).toString('hex');
+        if (ids.has(id)) fail('El catálogo contiene clientes duplicados.');
+        ids.add(id);
+
+        const normalized = { id };
+        for (const [key, maxLength] of Object.entries({
+            name: 200,
+            ruc: 100,
+            dv: 10,
+            phone: 100,
+            email: 254,
+            address: 500
+        })) {
+            const value = client[key] ?? '';
+            if (typeof value !== 'string' || value.length > maxLength) {
+                fail('Un campo del cliente excede el formato permitido.');
+            }
+            normalized[key] = value.trim();
+        }
+        if (!normalized.name) fail('El nombre del cliente es obligatorio.');
+        if (normalized.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.email)) {
+            fail('El correo electrónico del cliente no es válido.');
+        }
+        return normalized;
+    });
 }
 
 async function supabaseRequest(table, query = '', options = {}) {
@@ -305,6 +362,76 @@ async function saveIssuer(issuer) {
         prefer: 'resolution=merge-duplicates,return=minimal',
         body: { key: 'issuer', value: issuer }
     });
+}
+
+async function getClients() {
+    const clients = [];
+    for (let offset = 0; ; offset += 1000) {
+        const rows = await supabaseRequest(
+            'facturapro_settings',
+            `select=key,value&key=like.client%3A%25&limit=1000&offset=${offset}`
+        );
+        clients.push(...rows.map(row => ({ ...row.value, id: row.key.slice('client:'.length) })));
+        if (rows.length < 1000) return validateClients(clients);
+    }
+}
+
+async function saveClient(client) {
+    await supabaseRequest('facturapro_settings', 'on_conflict=key', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: {
+            key: `client:${client.id}`,
+            value: {
+                name: client.name,
+                ruc: client.ruc,
+                dv: client.dv,
+                phone: client.phone,
+                email: client.email,
+                address: client.address
+            }
+        }
+    });
+}
+
+async function deleteClient(id) {
+    const rows = await supabaseRequest(
+        'facturapro_settings',
+        `key=eq.${encodeURIComponent(`client:${id}`)}&select=key`,
+        { method: 'DELETE', prefer: 'return=representation' }
+    );
+    return rows.length > 0;
+}
+
+function validateClientId(id) {
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(id)) {
+        const error = new Error('El identificador del cliente no es válido.');
+        error.status = 400;
+        throw error;
+    }
+    return id;
+}
+
+function ensureClientCapacity(clients, clientId) {
+    if (clients.length >= 5000 && !clients.some(client => client.id === clientId)) {
+        const error = new Error('El catálogo alcanzó el máximo de 5000 clientes.');
+        error.status = 400;
+        throw error;
+    }
+}
+
+async function updateClient(client) {
+    const id = validateClientId(client.id);
+    const existing = await getClients();
+    ensureClientCapacity(existing, id);
+    await saveClient(client);
+    return client;
+}
+
+async function removeClient(id) {
+    const validId = validateClientId(id);
+    if (!await deleteClient(validId)) return false;
+    return true;
 }
 
 async function listInvoices() {
@@ -501,6 +628,21 @@ async function handleApi(request, response, url) {
     if (method === 'GET' && path === '/api/bootstrap') {
         const [issuer, invoices] = await Promise.all([getIssuer(), listInvoices()]);
         return jsonResponse(response, 200, { issuer, invoices });
+    }
+    if (method === 'GET' && path === '/api/clients') {
+        return jsonResponse(response, 200, { clients: await getClients() });
+    }
+    if (method === 'PUT' && path === '/api/clients') {
+        const body = await readJson(request);
+        const client = validateClients([body.client])[0];
+        await updateClient(client);
+        return jsonResponse(response, 200, { client });
+    }
+    const clientRoute = path.match(/^\/api\/clients\/([^/]+)$/);
+    if (clientRoute && method === 'DELETE') {
+        const id = decodeURIComponent(clientRoute[1]);
+        if (!await removeClient(id)) return jsonResponse(response, 404, { error: 'No se encontró el cliente.' });
+        return jsonResponse(response, 200, { deleted: true });
     }
     if (method === 'PUT' && path === '/api/settings/issuer') {
         const issuer = validateIssuer(await readJson(request));

@@ -24,7 +24,9 @@ La importación desde `localStorage` de la versión anterior sigue disponible al
 
 En **Configuración de pagos** puedes guardar instrucciones para cada método disponible (ACH, Yappy, efectivo, tarjetas y crédito). Se conservan en Supabase y el método seleccionado añade automáticamente sus instrucciones a la factura y al PDF. Los datos ACH guardados anteriormente se conservan.
 
-Al iniciar sesión, el panel principal permite abrir **Facturación**, **Historial de facturas** o **Configuración de pagos**. También muestra los importes facturados, cobrados y pendientes, junto con un gráfico de barras de la facturación de los últimos seis meses; las facturas anuladas no se incluyen en los importes.
+Al iniciar sesión, el panel principal permite abrir **Facturación**, **Historial**, **Clientes**, **Reportes**, **Cuentas por cobrar** y **Configuración de pagos**. También muestra los importes facturados, cobrados y pendientes, junto con un gráfico de barras de la facturación de los últimos seis meses; las facturas anuladas no se incluyen en los importes.
+
+El módulo **Clientes** guarda un catálogo reutilizable para completar los datos al crear o editar facturas. **Reportes** permite filtrar por fechas y estado, revisar totales e ITBMS y descargar un CSV. **Cuentas por cobrar** agrupa facturas pendientes por vencimiento (al día, 1–30, 31–60 y más de 60 días); las que no tienen fecha de vencimiento se muestran aparte. Los clientes se guardan en la tabla de configuración existente de Supabase y no requieren una migración adicional.
 
 ## Inicio automático en Linux
 
