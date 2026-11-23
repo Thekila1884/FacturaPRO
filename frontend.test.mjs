@@ -156,3 +156,82 @@ test('contract next charge uses the configured interval after payment', () => {
     assert.equal(snapshot.nextDate, '2025-02-13');
     assert.equal(snapshot.earlyPaymentNextDate, '2025-02-11');
 });
+
+test('contract invoice counts are grouped by their contract origin', () => {
+    const context = createAppContext();
+    vm.runInContext(`
+        savedInvoices = [
+            { id: 'one', automaticContract: { contractId: 'contract-a' } },
+            { id: 'two', automaticContract: { contractId: 'contract-a' } },
+            { id: 'three', automaticContract: { contractId: 'contract-b' } },
+            { id: 'manual' }
+        ];
+    `, context);
+    const counts = JSON.parse(vm.runInContext(
+        'JSON.stringify([...getContractInvoiceCounts()])',
+        context
+    ));
+
+    assert.deepEqual(counts, [['contract-a', 2], ['contract-b', 1]]);
+});
+
+test('contract invoice history filters by contract and displays its invoice count', () => {
+    const makeElement = () => ({
+        children: [],
+        classList: { toggle() {} },
+        replaceChildren(...children) { this.children = children; },
+        appendChild(child) { this.children.push(child); },
+        addEventListener() {},
+        set innerHTML(value) {
+            this.html = value;
+            this.lastElementChild = makeElement();
+        }
+    });
+    const elements = {
+        'contract-invoice-history-filter': makeElement(),
+        'contract-invoice-history-count': makeElement(),
+        'contract-invoice-history-tbody': makeElement(),
+        'contract-invoice-history-empty': makeElement()
+    };
+    const context = createAppContext(elements, { createElement: makeElement });
+    context.lucide = { createIcons() {} };
+    vm.runInContext(`
+        savedContracts = [
+            { id: 'contract-a', clientId: 'client-a', clientName: 'Cliente A', description: 'Soporte' },
+            { id: 'contract-b', clientId: 'client-b', clientName: 'Cliente B', description: 'Consultoría' }
+        ];
+        savedInvoices = [
+            {
+                id: 'invoice-1', number: 'FAC-1', date: '2026-03-01', dueDate: '2026-03-05',
+                status: 'Pendiente', client: { name: 'Cliente A' }, items: [{ description: 'Soporte' }],
+                totals: { grandTotal: 10 },
+                automaticContract: { contractId: 'contract-a', dueDate: '2026-03-05', email: { status: 'sent' } }
+            },
+            {
+                id: 'invoice-2', number: 'FAC-2', date: '2026-03-06', dueDate: '2026-03-10',
+                status: 'Pendiente', client: { name: 'Cliente A' }, items: [{ description: 'Soporte' }],
+                totals: { grandTotal: 10 },
+                automaticContract: { contractId: 'contract-a', dueDate: '2026-03-10', email: { status: 'failed' } }
+            },
+            {
+                id: 'invoice-3', number: 'FAC-3', date: '2026-03-06', dueDate: '2026-03-11',
+                status: 'Pendiente', client: { name: 'Cliente B' }, items: [{ description: 'Consultoría' }],
+                totals: { grandTotal: 20 },
+                automaticContract: { contractId: 'contract-b', dueDate: '2026-03-11', email: { status: 'pending' } }
+            },
+            { id: 'invoice-manual', number: 'FAC-4' }
+        ];
+    `, context);
+
+    vm.runInContext('renderContractInvoiceHistory()', context);
+    assert.equal(elements['contract-invoice-history-tbody'].children.length, 3);
+    assert.equal(elements['contract-invoice-history-count'].textContent, '3 de 3 factura(s) de contrato');
+    assert.ok(elements['contract-invoice-history-tbody'].children.some(row =>
+        /2 factura\(s\) en este contrato/.test(row.html)
+    ));
+
+    elements['contract-invoice-history-filter'].value = 'contract-a';
+    vm.runInContext('renderContractInvoiceHistory()', context);
+    assert.equal(elements['contract-invoice-history-tbody'].children.length, 2);
+    assert.equal(elements['contract-invoice-history-count'].textContent, '2 de 3 factura(s) de contrato');
+});

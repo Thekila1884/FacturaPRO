@@ -526,6 +526,9 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         assert.equal(automation.emailed, 0);
         assert.equal(resendRequests.length, 1);
         assert.equal(resendRequests[0].to[0], secondClient.email);
+        assert.match(resendRequests[0].html, /Resumen de cargos/);
+        assert.match(resendRequests[0].html, /TOTAL A PAGAR/);
+        assert.match(resendRequests[0].text, /Fecha de vencimiento:/);
         const attachment = Buffer.from(resendRequests[0].attachments[0].content, 'base64');
         assert.equal(attachment.subarray(0, 5).toString(), '%PDF-');
         const generatedInvoice = (await api('/api/invoices')).invoices
@@ -582,6 +585,39 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         await api(staleEmailContractPath, { method: 'DELETE' });
         await api('/api/clients', { method: 'PUT', body: { client: secondClient } });
         await api(`/api/invoices/${generatedInvoice.id}`, { method: 'DELETE' });
+
+        const manualContract = (await api('/api/contracts', {
+            method: 'PUT',
+            body: {
+                ...newContract,
+                clientId: 'client-2',
+                description: 'Servicio con factura manual'
+            },
+            expected: 201
+        })).contract;
+        const manualContractPath = `/api/contracts/${manualContract.id}`;
+        await api(`${manualContractPath}/collection/start`, { method: 'POST' });
+        const manualInvoiceResult = await api(`${manualContractPath}/invoices`, {
+            method: 'POST',
+            body: {}
+        });
+        assert.equal(manualInvoiceResult.created, true);
+        assert.equal(manualInvoiceResult.emailed, true);
+        assert.equal(manualInvoiceResult.invoice.automaticContract.contractId, manualContract.id);
+        assert.equal(manualInvoiceResult.invoice.dueDate, addDays(today, 5));
+        assert.equal(resendRequests.length, 3);
+        const repeatedManualInvoice = await api(`${manualContractPath}/invoices`, {
+            method: 'POST',
+            body: {}
+        });
+        assert.equal(repeatedManualInvoice.created, false);
+        assert.equal(repeatedManualInvoice.alreadySent, true);
+        assert.equal(repeatedManualInvoice.invoice.id, manualInvoiceResult.invoice.id);
+        assert.equal(resendRequests.length, 3);
+        assert.equal((await api('/api/invoices')).invoices
+            .filter(invoice => invoice.automaticContract?.contractId === manualContract.id).length, 1);
+        await api(`/api/invoices/${manualInvoiceResult.invoice.id}`, { method: 'DELETE' });
+        await api(manualContractPath, { method: 'DELETE' });
     } finally {
         globalThis.fetch = originalFetch;
     }

@@ -918,6 +918,140 @@ function escapeEmailHtml(value) {
     })[character]);
 }
 
+function createInvoiceEmailContent(invoice, issuer) {
+    const itemRows = invoice.items.map(item => `
+        <tr>
+            <td style="padding:12px 0;border-bottom:1px solid #e2e8f0;color:#334155;font-size:14px;">
+                ${escapeEmailHtml(item.description)}
+                <div style="padding-top:4px;color:#64748b;font-size:12px;">
+                    ${item.qty} × ${formatInvoicePdfMoney(item.price)} · ${item.itbms ? 'ITBMS 7%' : 'Exento'}
+                </div>
+            </td>
+            <td align="right" style="padding:12px 0;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:14px;font-weight:600;white-space:nowrap;">
+                ${formatInvoicePdfMoney(item.qty * item.price)}
+            </td>
+        </tr>`).join('');
+    const discountRow = invoice.totals.discount > 0
+        ? `<tr><td style="padding:4px 0;color:#64748b;font-size:13px;">Descuento</td><td align="right" style="padding:4px 0;color:#64748b;font-size:13px;">−${formatInvoicePdfMoney(invoice.totals.discount)}</td></tr>`
+        : '';
+    const textItems = invoice.items.map(item =>
+        `- ${item.qty} x ${item.description}: ${formatInvoicePdfMoney(item.qty * item.price)} (${item.itbms ? 'ITBMS 7%' : 'exento'})`
+    ).join('\n');
+
+    return {
+        html: `<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f1f5f9;padding:32px 12px;">
+        <tr><td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+                <tr>
+                    <td style="padding:24px 32px;background-color:#0f172a;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td style="color:#ffffff;font-size:18px;font-weight:700;">${escapeEmailHtml(issuer.name)}</td>
+                                <td align="right" style="color:#a7f3d0;font-size:11px;font-weight:700;letter-spacing:1.2px;">FACTURAPRO</td>
+                            </tr>
+                        </table>
+                        <p style="margin:24px 0 5px;color:#a7f3d0;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Factura comercial</p>
+                        <h1 style="margin:0;color:#ffffff;font-size:24px;line-height:1.3;">${escapeEmailHtml(invoice.number)}</h1>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:28px 32px 12px;">
+                        <p style="margin:0 0 10px;color:#0f172a;font-size:16px;font-weight:700;">Hola ${escapeEmailHtml(invoice.client.name)},</p>
+                        <p style="margin:0;color:#475569;font-size:14px;line-height:1.7;">
+                            Te compartimos el resumen de tu factura. Encontrarás el documento completo en PDF adjunto a este correo.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:16px 32px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+                            <tr>
+                                <td style="padding:16px;color:#475569;font-size:12px;">TOTAL A PAGAR</td>
+                                <td align="right" style="padding:16px;color:#047857;font-size:22px;font-weight:700;white-space:nowrap;">${formatInvoicePdfMoney(invoice.totals.grandTotal)} USD</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 32px 12px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td style="padding:7px 0;color:#64748b;font-size:13px;">Fecha de emisión</td>
+                                <td align="right" style="padding:7px 0;color:#334155;font-size:13px;">${formatInvoicePdfDate(invoice.date)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:7px 0;color:#64748b;font-size:13px;">Fecha de vencimiento</td>
+                                <td align="right" style="padding:7px 0;color:#334155;font-size:13px;font-weight:700;">${formatInvoicePdfDate(invoice.dueDate)}</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:16px 32px 8px;">
+                        <h2 style="margin:0 0 8px;color:#0f172a;font-size:15px;">Resumen de cargos</h2>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                            ${itemRows}
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:12px 32px 24px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                            <tr><td style="padding:4px 0;color:#64748b;font-size:13px;">Subtotal</td><td align="right" style="padding:4px 0;color:#64748b;font-size:13px;">${formatInvoicePdfMoney(invoice.totals.subtotal)}</td></tr>
+                            ${discountRow}
+                            <tr><td style="padding:4px 0;color:#64748b;font-size:13px;">ITBMS</td><td align="right" style="padding:4px 0;color:#64748b;font-size:13px;">${formatInvoicePdfMoney(invoice.totals.itbms)}</td></tr>
+                            <tr><td colspan="2" style="padding-top:10px;border-top:1px solid #cbd5e1;"></td></tr>
+                            <tr><td style="padding:4px 0;color:#0f172a;font-size:15px;font-weight:700;">Total</td><td align="right" style="padding:4px 0;color:#047857;font-size:15px;font-weight:700;">${formatInvoicePdfMoney(invoice.totals.grandTotal)} USD</td></tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 32px 28px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#ecfdf5;border-radius:10px;">
+                            <tr><td style="padding:14px 16px;color:#065f46;font-size:13px;line-height:1.6;">
+                                <strong>PDF adjunto</strong><br>Guarda el archivo adjunto para consultar o imprimir el detalle completo.
+                            </td></tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:20px 32px;background-color:#f8fafc;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;line-height:1.7;">
+                        Saludos,<br><strong style="color:#334155;">${escapeEmailHtml(issuer.name)}</strong>
+                        <p style="margin:10px 0 0;color:#94a3b8;font-size:11px;">Mensaje generado automáticamente por FacturaPro.</p>
+                    </td>
+                </tr>
+            </table>
+        </td></tr>
+    </table>
+</body>
+</html>`,
+        text: `Hola ${invoice.client.name},
+
+Te compartimos tu factura ${invoice.number}, emitida por ${issuer.name}.
+
+Fecha de emisión: ${formatInvoicePdfDate(invoice.date)}
+Fecha de vencimiento: ${formatInvoicePdfDate(invoice.dueDate)}
+Total a pagar: ${formatInvoicePdfMoney(invoice.totals.grandTotal)} USD
+
+Resumen de cargos:
+${textItems}
+
+Subtotal: ${formatInvoicePdfMoney(invoice.totals.subtotal)}
+Descuento: ${formatInvoicePdfMoney(invoice.totals.discount)}
+ITBMS: ${formatInvoicePdfMoney(invoice.totals.itbms)}
+Total: ${formatInvoicePdfMoney(invoice.totals.grandTotal)} USD
+
+Adjuntamos el PDF con el detalle completo.
+
+Saludos,
+${issuer.name}`
+    };
+}
+
 async function sendInvoiceEmail(invoice, issuer) {
     if (!resendConfigured) {
         const error = new Error('Configura Resend en el servidor antes de enviar correos.');
@@ -930,6 +1064,7 @@ async function sendInvoiceEmail(invoice, issuer) {
     }
     const pdf = await createInvoicePdf(invoice, issuer);
     const safeNumber = invoice.number.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
+    const emailContent = createInvoiceEmailContent(invoice, issuer);
     const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -942,11 +1077,8 @@ async function sendInvoiceEmail(invoice, issuer) {
             from: resendFromEmail,
             to: [recipient],
             subject: `Factura ${invoice.number} · ${issuer.name}`,
-            html: `<p>Hola ${escapeEmailHtml(invoice.client.name)},</p>
-                <p>Adjuntamos la factura <strong>${escapeEmailHtml(invoice.number)}</strong> por
-                <strong>${formatInvoicePdfMoney(invoice.totals.grandTotal)}</strong> USD.</p>
-                <p>Fecha de vencimiento: ${formatInvoicePdfDate(invoice.dueDate)}.</p>
-                <p>Saludos,<br>${escapeEmailHtml(issuer.name)}</p>`,
+            html: emailContent.html,
+            text: emailContent.text,
             attachments: [{
                 filename: `Factura-${safeNumber}.pdf`,
                 content: pdf.toString('base64')
@@ -1018,6 +1150,49 @@ function getAutomaticInvoiceIdentity(contractId, dueDate) {
     };
 }
 
+function createContractInvoice(contract, charge, date, catalogClient) {
+    const amount = Number(charge.amount ?? contract.defaultChargeAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        const error = new Error('El período no tiene un monto válido configurado.');
+        error.status = 409;
+        throw error;
+    }
+    const identity = getAutomaticInvoiceIdentity(contract.id, charge.dueDate);
+    return {
+        ...validateInvoice({
+            id: identity.id,
+            number: identity.number,
+            status: charge.paidAt ? 'Pagada' : 'Pendiente',
+            date,
+            dueDate: charge.dueDate,
+            paymentTerms: `Contrato recurrente · cada ${contract.billingIntervalDays} días`,
+            client: {
+                name: catalogClient?.name || contract.clientName,
+                ruc: catalogClient?.ruc || contract.clientRuc || '',
+                dv: catalogClient?.dv || contract.clientDv || '',
+                phone: catalogClient?.phone || contract.clientPhone || '',
+                email: catalogClient ? catalogClient.email : contract.clientEmail || '',
+                address: catalogClient?.address || contract.clientAddress || ''
+            },
+            items: [{
+                id: `contract-item-${contract.id}`.slice(0, 100),
+                qty: 1,
+                description: contract.description,
+                price: amount,
+                itbms: contract.billItbms !== false
+            }],
+            discountType: 'none',
+            discountValue: 0,
+            notes: contract.notes || ''
+        }),
+        automaticContract: {
+            contractId: contract.id,
+            dueDate: charge.dueDate,
+            email: { status: contract.sendInvoiceEmail ? 'pending' : 'disabled' }
+        }
+    };
+}
+
 async function executeContractInvoiceAutomation(today) {
     const [contracts, invoices, clients, issuer] = await Promise.all([
         listContracts(),
@@ -1050,39 +1225,7 @@ async function executeContractInvoiceAutomation(today) {
                 let invoice = invoiceById.get(identity.id);
                 if (!invoice) {
                     const catalogClient = clients.find(client => client.id === contract.clientId);
-                    invoice = {
-                        ...validateInvoice({
-                            id: identity.id,
-                            number: identity.number,
-                            status: charge.paidAt ? 'Pagada' : 'Pendiente',
-                            date: today,
-                            dueDate: charge.dueDate,
-                            paymentTerms: `Contrato recurrente · cada ${contract.billingIntervalDays} días`,
-                            client: {
-                                name: catalogClient?.name || contract.clientName,
-                                ruc: catalogClient?.ruc || contract.clientRuc || '',
-                                dv: catalogClient?.dv || contract.clientDv || '',
-                                phone: catalogClient?.phone || contract.clientPhone || '',
-                                email: catalogClient ? catalogClient.email : contract.clientEmail || '',
-                                address: catalogClient?.address || contract.clientAddress || ''
-                            },
-                            items: [{
-                                id: `contract-item-${contract.id}`.slice(0, 100),
-                                qty: 1,
-                                description: contract.description,
-                                price: amount,
-                                itbms: contract.billItbms !== false
-                            }],
-                            discountType: 'none',
-                            discountValue: 0,
-                            notes: contract.notes || ''
-                        }),
-                        automaticContract: {
-                            contractId: contract.id,
-                            dueDate: charge.dueDate,
-                            email: { status: contract.sendInvoiceEmail ? 'pending' : 'disabled' }
-                        }
-                    };
+                    invoice = createContractInvoice(contract, charge, today, catalogClient);
                     await saveInvoice(invoice);
                     invoiceById.set(invoice.id, invoice);
                     result.created++;
@@ -1425,6 +1568,56 @@ async function handleApi(request, response, url) {
         return jsonResponse(response, existing ? 200 : 201, {
             contract: await getContractDetails(contract)
         });
+    }
+    const contractInvoiceRoute = path.match(/^\/api\/contracts\/([^/]+)\/invoices$/);
+    if (method === 'POST' && contractInvoiceRoute) {
+        const id = validateContractId(decodeURIComponent(contractInvoiceRoute[1]));
+        const savedContract = await getContract(id);
+        if (!savedContract) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
+        const contract = { ...savedContract, id };
+        if (!contract.collectionStartedAt) {
+            return jsonResponse(response, 409, { error: 'Primero debes empezar a cobrar este contrato.' });
+        }
+
+        const charges = await getContractCharges(id);
+        const dueDate = getNextChargeDueDate(contract, charges);
+        if (!dueDate) {
+            return jsonResponse(response, 409, { error: 'El contrato no tiene otro período de cobro vigente.' });
+        }
+        const charge = charges.find(item => item.dueDate === dueDate) || {
+            dueDate,
+            amount: contract.defaultChargeAmount,
+            paidAt: ''
+        };
+        const identity = getAutomaticInvoiceIdentity(id, dueDate);
+        let invoice = await getInvoice(identity.id);
+        let created = false;
+        if (!invoice) {
+            const clients = await getClients();
+            const catalogClient = clients.find(client => client.id === contract.clientId);
+            invoice = createContractInvoice(contract, charge, getCurrentPanamaDate(), catalogClient);
+            await saveInvoice(invoice);
+            created = true;
+        } else if (invoice.automaticContract?.contractId !== id ||
+            invoice.automaticContract?.dueDate !== dueDate ||
+            !invoice.automaticContract.email) {
+            return jsonResponse(response, 409, { error: 'La factura del período existe con un origen incompatible.' });
+        }
+
+        if (invoice.automaticContract.email.status === 'sent') {
+            return jsonResponse(response, 200, { invoice, created, emailed: false, alreadySent: true });
+        }
+        try {
+            const sentInvoice = await sendInvoiceWithStatus(invoice, await getIssuer());
+            return jsonResponse(response, 200, { invoice: sentInvoice, created, emailed: true });
+        } catch (error) {
+            const failedInvoice = await getInvoice(invoice.id);
+            return jsonResponse(response, error.status || 502, {
+                error: error.message,
+                invoice: failedInvoice,
+                created
+            });
+        }
     }
     const startCollectionRoute = path.match(/^\/api\/contracts\/([^/]+)\/collection\/start$/);
     if (startCollectionRoute && method === 'POST') {
