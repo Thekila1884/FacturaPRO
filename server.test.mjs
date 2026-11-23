@@ -20,6 +20,23 @@ const tables = {
 };
 const loginAttempts = new Map();
 
+function getPanamaDate(date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Panama',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addDays(date, days) {
+    const value = new Date(`${date}T00:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + days);
+    return value.toISOString().slice(0, 10);
+}
+
 function sendJson(response, status, data) {
     response.writeHead(status, { 'Content-Type': 'application/json' });
     response.end(JSON.stringify(data));
@@ -349,13 +366,13 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     });
     assert.deepEqual((await api('/api/clients')).clients, [updatedClient, secondClient]);
 
+    const today = getPanamaDate();
     const newContract = {
         clientId: 'client-1',
-        description: 'Soporte mensual',
-        monthlyAmount: 125.5,
-        dueDay: 31,
-        startMonth: '2025-01',
-        endMonth: '2025-12',
+        description: 'Soporte técnico',
+        billingIntervalDays: 5,
+        startDate: today,
+        endDate: '',
         notes: 'Atención remota'
     };
     const createdContract = (await api('/api/contracts', {
@@ -364,17 +381,18 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         expected: 201
     })).contract;
     assert.equal(createdContract.clientName, updatedClient.name);
-    assert.equal(createdContract.monthlyAmount, 125.5);
+    assert.equal(createdContract.billingIntervalDays, 5);
+    assert.equal(createdContract.startDate, today);
     assert.deepEqual(createdContract.payments, []);
     assert.deepEqual((await api('/api/contracts')).contracts.map(({ id }) => id), [createdContract.id]);
     await api('/api/contracts', {
         method: 'PUT',
-        body: { ...newContract, id: createdContract.id, endMonth: '2024-12' },
+        body: { ...newContract, id: createdContract.id, endDate: addDays(today, -1) },
         expected: 400
     });
     await api('/api/contracts', {
         method: 'PUT',
-        body: { ...newContract, endMonth: 0 },
+        body: { ...newContract, billingIntervalDays: 31 },
         expected: 400
     });
     await api('/api/contracts', {
@@ -382,23 +400,65 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         body: { ...newContract, clientId: 'unknown-client' },
         expected: 400
     });
-    const paymentPath = `/api/contracts/${createdContract.id}/payments/2025-02`;
-    await api(paymentPath, { method: 'PUT', body: { paidAt: '2025-02-28' } });
-    await api(paymentPath, { method: 'PUT', body: { paidAt: '2025-02-30' }, expected: 400 });
-    await api(`/api/contracts/${createdContract.id}/payments/2026-01`, {
+    const contractPath = `/api/contracts/${createdContract.id}`;
+    await api(`${contractPath}/collection/start`, { method: 'POST' });
+    const activatedContract = (await api('/api/contracts')).contracts[0];
+    const firstDueDate = addDays(today, 5);
+    assert.equal(activatedContract.collectionStartedAt, today);
+    assert.equal(activatedContract.nextChargeDate, firstDueDate);
+
+    await api(`${contractPath}/charges/${firstDueDate}`, {
         method: 'PUT',
-        body: { paidAt: '2026-01-05' },
+        body: { amount: 125.5 }
+    });
+    await api(`${contractPath}/charges/${firstDueDate}`, {
+        method: 'PUT',
+        body: { amount: 0.001 },
         expected: 400
     });
-    assert.deepEqual((await api('/api/contracts')).contracts[0].payments, [
-        { month: '2025-02', paidAt: '2025-02-28' }
-    ]);
+    const paymentPath = `${contractPath}/charges/${firstDueDate}/payment`;
+    await api(paymentPath, { method: 'PUT', body: { paidAt: addDays(today, 1) }, expected: 400 });
+    await api(paymentPath, { method: 'PUT', body: { paidAt: today } });
+    const paidContract = (await api('/api/contracts')).contracts[0];
+    assert.equal(paidContract.charges[0].amount, 125.5);
+    assert.equal(paidContract.charges[0].paidAt, today);
+    assert.equal(paidContract.nextChargeDate, addDays(firstDueDate, 5));
+
+    await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, id: createdContract.id, billingIntervalDays: 6 },
+        expected: 400
+    });
     await api(paymentPath, { method: 'DELETE' });
-    assert.deepEqual((await api('/api/contracts')).contracts[0].payments, []);
-    await api(paymentPath, { method: 'PUT', body: { paidAt: '2025-02-28' } });
+    const reversedContract = (await api('/api/contracts')).contracts[0];
+    assert.equal(reversedContract.charges[0].paidAt, '');
+    assert.equal(reversedContract.nextChargeDate, firstDueDate);
+
     await api(`/api/contracts/${createdContract.id}`, { method: 'DELETE' });
     assert.deepEqual((await api('/api/contracts')).contracts, []);
     assert.equal(tables.facturapro_settings.some(row => row.key.startsWith(`contract-payment:${createdContract.id}:`)), false);
+    assert.equal(tables.facturapro_settings.some(row => row.key.startsWith(`contract-charge:${createdContract.id}:`)), false);
+
+    const earlyPaymentContract = (await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, clientId: 'client-2', description: 'Pago anticipado' },
+        expected: 201
+    })).contract;
+    const earlyPaymentPath = `/api/contracts/${earlyPaymentContract.id}`;
+    await api(`${earlyPaymentPath}/collection/start`, { method: 'POST' });
+    const futureDueDate = addDays(today, 5);
+    await api(`${earlyPaymentPath}/charges/${futureDueDate}`, {
+        method: 'PUT',
+        body: { amount: 50 }
+    });
+    await api(`${earlyPaymentPath}/charges/${futureDueDate}/payment`, {
+        method: 'PUT',
+        body: { paidAt: today }
+    });
+    const earlyPaidContract = (await api('/api/contracts')).contracts
+        .find(contract => contract.id === earlyPaymentContract.id);
+    assert.equal(earlyPaidContract.nextChargeDate, addDays(futureDueDate, 5));
+    await api(earlyPaymentPath, { method: 'DELETE' });
 
     await api('/api/clients/client-1', { method: 'DELETE' });
     assert.deepEqual((await api('/api/clients')).clients, [secondClient]);

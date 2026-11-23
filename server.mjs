@@ -327,6 +327,23 @@ function validateContractMonth(value, label) {
     return value;
 }
 
+function getCurrentPanamaDate() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Panama',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date());
+    const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${value.year}-${value.month}-${value.day}`;
+}
+
+function addContractDays(date, days) {
+    const value = new Date(`${date}T00:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + days);
+    return value.toISOString().slice(0, 10);
+}
+
 function validateContractPaymentDate(value) {
     if (!isValidContractPaymentDate(value)) {
         const error = new Error('La fecha de pago no es válida.');
@@ -334,6 +351,28 @@ function validateContractPaymentDate(value) {
         throw error;
     }
     return value;
+}
+
+function getLastContractMonthDate(month) {
+    if (!isValidContractMonth(month)) return '';
+    const [year, monthNumber] = month.split('-').map(Number);
+    return new Date(Date.UTC(year, monthNumber, 0)).toISOString().slice(0, 10);
+}
+
+function getContractStartDate(contract) {
+    return contract.startDate ||
+        (isValidContractMonth(contract.startMonth) ? `${contract.startMonth}-01` : '');
+}
+
+function getContractEndDate(contract) {
+    return contract.endDate || getLastContractMonthDate(contract.endMonth);
+}
+
+function getContractActivationDate(contract) {
+    const value = typeof contract.collectionStartedAt === 'string'
+        ? contract.collectionStartedAt.slice(0, 10)
+        : '';
+    return isValidContractPaymentDate(value) ? value : '';
 }
 
 function isValidContractPaymentDate(value) {
@@ -359,23 +398,54 @@ function validateContract(input, client, existing = null) {
     if (!description || description.length > 200) {
         fail('El concepto del contrato es obligatorio y no debe exceder 200 caracteres.');
     }
-    const monthlyAmount = Number(input.monthlyAmount);
-    const roundedAmount = Math.round(monthlyAmount * 100) / 100;
-    if (!Number.isFinite(monthlyAmount) || monthlyAmount <= 0 ||
-        monthlyAmount > 1_000_000_000 || Math.abs(monthlyAmount - roundedAmount) > 1e-8) {
-        fail('El monto mensual debe ser un importe válido en USD, con hasta dos decimales.');
+    if (input.startDate === undefined && input.startMonth !== undefined &&
+        !isValidContractMonth(input.startMonth)) {
+        fail('La fecha de inicio del contrato no es válida.');
     }
-    const dueDay = Number(input.dueDay);
-    if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) {
-        fail('El día de vencimiento debe estar entre 1 y 31.');
+    const startDate = input.startDate === undefined
+        ? (isValidContractMonth(input.startMonth)
+            ? `${input.startMonth}-01`
+            : existing?.startDate || (existing?.startMonth ? `${existing.startMonth}-01` : ''))
+        : input.startDate;
+    if (!isValidContractPaymentDate(startDate)) fail('La fecha de inicio del contrato no es válida.');
+    const hasEndDate = input.endDate !== undefined && input.endDate !== null && input.endDate !== '';
+    if (hasEndDate && typeof input.endDate !== 'string') {
+        fail('La fecha de finalización del contrato no es válida.');
     }
-    const startMonth = validateContractMonth(input.startMonth, 'inicio');
-    const hasEndMonth = input.endMonth !== undefined && input.endMonth !== null && input.endMonth !== '';
-    if (hasEndMonth && typeof input.endMonth !== 'string') {
-        fail('El mes de finalización no es válido.');
+    if (input.endDate === undefined && input.endMonth !== undefined &&
+        input.endMonth !== '' && !isValidContractMonth(input.endMonth)) {
+        fail('La fecha de finalización del contrato no es válida.');
     }
-    const endMonth = hasEndMonth ? validateContractMonth(input.endMonth, 'finalización') : '';
-    if (endMonth && endMonth < startMonth) fail('El mes de finalización no puede preceder al inicio.');
+    const endDate = input.endDate === undefined
+        ? (input.endMonth === ''
+            ? ''
+            : getLastContractMonthDate(input.endMonth) || existing?.endDate || getLastContractMonthDate(existing?.endMonth))
+        : hasEndDate ? input.endDate : '';
+    if (endDate && !isValidContractPaymentDate(endDate)) fail('La fecha de finalización del contrato no es válida.');
+    if (endDate && endDate < startDate) fail('La fecha de finalización no puede preceder al inicio.');
+    const intervalInput = input.billingIntervalDays ?? existing?.billingIntervalDays ?? 30;
+    const billingIntervalDays = Number(intervalInput);
+    if (!Number.isInteger(billingIntervalDays) || billingIntervalDays < 1 || billingIntervalDays > 30) {
+        fail('El intervalo de cobro debe estar entre 1 y 30 días.');
+    }
+    if (getContractActivationDate(existing || {}) &&
+        billingIntervalDays !== Number(existing.billingIntervalDays || 30)) {
+        fail('No se puede cambiar el intervalo de cobro después de iniciar el seguimiento.');
+    }
+    let monthlyAmount = existing?.monthlyAmount ?? null;
+    if (Object.hasOwn(input, 'monthlyAmount')) {
+        if (input.monthlyAmount === null || input.monthlyAmount === '') {
+            monthlyAmount = null;
+        } else {
+            const amount = Number(input.monthlyAmount);
+            const rounded = Math.round(amount * 100) / 100;
+            if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000 ||
+                Math.abs(amount - rounded) > 1e-8) {
+                fail('El monto de referencia debe ser válido y tener hasta dos decimales.');
+            }
+            monthlyAmount = rounded;
+        }
+    }
     const notes = input.notes ?? '';
     if (typeof notes !== 'string' || notes.length > 1000) {
         fail('Las notas del contrato exceden el formato permitido.');
@@ -388,11 +458,20 @@ function validateContract(input, client, existing = null) {
         id,
         clientId,
         clientName: client?.name || existing.clientName,
+        clientRuc: client?.ruc ?? existing?.clientRuc ?? '',
+        clientDv: client?.dv ?? existing?.clientDv ?? '',
+        clientPhone: client?.phone ?? existing?.clientPhone ?? '',
+        clientEmail: client?.email ?? existing?.clientEmail ?? '',
+        clientAddress: client?.address ?? existing?.clientAddress ?? '',
         description,
-        monthlyAmount: roundedAmount,
-        dueDay,
-        startMonth,
-        endMonth,
+        monthlyAmount,
+        dueDay: existing?.dueDay || 1,
+        startDate,
+        endDate,
+        startMonth: startDate.slice(0, 7),
+        endMonth: endDate ? endDate.slice(0, 7) : '',
+        billingIntervalDays,
+        collectionStartedAt: getContractActivationDate(existing || {}),
         notes: notes.trim(),
         createdAt: existing?.createdAt || now,
         updatedAt: now
@@ -568,25 +647,41 @@ async function getContractPayments(contractId = null) {
     });
 }
 
-async function saveContractPayment(contractId, month, paidAt) {
+async function getContractCharges(contractId = null) {
+    const prefix = contractId === null ? 'contract-charge:' : `contract-charge:${validateContractId(contractId)}:`;
+    const rows = await getSettingsRowsByPrefix(prefix);
+    return rows.map(row => {
+        const match = row.key.match(/^contract-charge:([a-zA-Z0-9_-]{1,100}):(\d{4}-\d{2}-\d{2})$/);
+        const value = row.value;
+        const amount = Number(value?.amount);
+        const roundedAmount = Math.round(amount * 100) / 100;
+        if (!match || !value || typeof value !== 'object' || Array.isArray(value) ||
+            value.contractId !== match[1] || value.dueDate !== match[2] ||
+            !isValidContractPaymentDate(value.dueDate) ||
+            !Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000 ||
+            Math.abs(amount - roundedAmount) > 1e-8 ||
+            (value.paidAt !== '' && !isValidContractPaymentDate(value.paidAt))) {
+            throw new Error('Los datos de un cobro de contrato guardado no son válidos.');
+        }
+        return {
+            contractId: match[1],
+            dueDate: match[2],
+            amount: roundedAmount,
+            paidAt: value.paidAt || ''
+        };
+    });
+}
+
+async function saveContractCharge(contractId, dueDate, amount, paidAt = '') {
     const id = validateContractId(contractId);
     await supabaseRequest('facturapro_settings', 'on_conflict=key', {
         method: 'POST',
         prefer: 'resolution=merge-duplicates,return=minimal',
         body: {
-            key: `contract-payment:${id}:${month}`,
-            value: { contractId: id, month, paidAt, updatedAt: new Date().toISOString() }
+            key: `contract-charge:${id}:${dueDate}`,
+            value: { contractId: id, dueDate, amount, paidAt, updatedAt: new Date().toISOString() }
         }
     });
-}
-
-async function removeContractPayment(contractId, month) {
-    const id = validateContractId(contractId);
-    await supabaseRequest(
-        'facturapro_settings',
-        `key=eq.${encodeURIComponent(`contract-payment:${id}:${month}`)}&select=key`,
-        { method: 'DELETE', prefer: 'return=representation' }
-    );
 }
 
 async function deleteContractPayments(contractId) {
@@ -598,9 +693,18 @@ async function deleteContractPayments(contractId) {
     );
 }
 
+async function deleteContractCharges(contractId) {
+    const id = validateContractId(contractId);
+    await supabaseRequest(
+        'facturapro_settings',
+        `key=like.${encodeURIComponent(`contract-charge:${id}:%`)}&select=key`,
+        { method: 'DELETE', prefer: 'return=representation' }
+    );
+}
+
 async function deleteContract(id) {
     const validId = validateContractId(id);
-    await deleteContractPayments(validId);
+    await Promise.all([deleteContractPayments(validId), deleteContractCharges(validId)]);
     const rows = await supabaseRequest(
         'facturapro_settings',
         `key=eq.${encodeURIComponent(`contract:${validId}`)}&select=key`,
@@ -609,16 +713,58 @@ async function deleteContract(id) {
     return rows.length > 0;
 }
 
+function getNextChargeDueDate(contract, charges) {
+    const activationDate = getContractActivationDate(contract);
+    const billingIntervalDays = Number(contract.billingIntervalDays || 30);
+    if (!activationDate || !Number.isInteger(billingIntervalDays) ||
+        billingIntervalDays < 1 || billingIntervalDays > 30) return '';
+    const lastPaidCharge = charges
+        .filter(charge => charge.paidAt)
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+        .at(-1);
+    const baseDate = lastPaidCharge
+        ? (lastPaidCharge.paidAt > lastPaidCharge.dueDate ? lastPaidCharge.paidAt : lastPaidCharge.dueDate)
+        : activationDate;
+    const nextDueDate = addContractDays(baseDate, billingIntervalDays);
+    const endDate = getContractEndDate(contract);
+    if (endDate && nextDueDate > endDate) return '';
+    return nextDueDate;
+}
+
+async function getContractDetails(contract) {
+    const [payments, charges] = await Promise.all([
+        getContractPayments(contract.id),
+        getContractCharges(contract.id)
+    ]);
+    return {
+        ...contract,
+        startDate: getContractStartDate(contract),
+        endDate: getContractEndDate(contract),
+        collectionStartedAt: getContractActivationDate(contract),
+        billingIntervalDays: contract.billingIntervalDays || 30,
+        payments: payments.map(({ month, paidAt }) => ({ month, paidAt })),
+        charges: charges.map(({ dueDate, amount, paidAt }) => ({ dueDate, amount, paidAt })),
+        nextChargeDate: getNextChargeDueDate(contract, charges)
+    };
+}
+
 async function listContracts() {
-    const [contractRows, payments] = await Promise.all([
+    const [contractRows, payments, charges] = await Promise.all([
         getSettingsRowsByPrefix('contract:'),
-        getContractPayments()
+        getContractPayments(),
+        getContractCharges()
     ]);
     const paymentsByContract = new Map();
     for (const payment of payments) {
         const contractPayments = paymentsByContract.get(payment.contractId) || [];
         contractPayments.push({ month: payment.month, paidAt: payment.paidAt });
         paymentsByContract.set(payment.contractId, contractPayments);
+    }
+    const chargesByContract = new Map();
+    for (const charge of charges) {
+        const contractCharges = chargesByContract.get(charge.contractId) || [];
+        contractCharges.push({ dueDate: charge.dueDate, amount: charge.amount, paidAt: charge.paidAt });
+        chargesByContract.set(charge.contractId, contractCharges);
     }
     return contractRows.map(row => {
         const id = row.key.slice('contract:'.length);
@@ -630,7 +776,13 @@ async function listContracts() {
         return {
             ...contract,
             id,
-            payments: (paymentsByContract.get(id) || []).sort((a, b) => a.month.localeCompare(b.month))
+            startDate: getContractStartDate(contract),
+            endDate: getContractEndDate(contract),
+            collectionStartedAt: getContractActivationDate(contract),
+            billingIntervalDays: contract.billingIntervalDays || 30,
+            payments: (paymentsByContract.get(id) || []).sort((a, b) => a.month.localeCompare(b.month)),
+            charges: (chargesByContract.get(id) || []).sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
+            nextChargeDate: getNextChargeDueDate(contract, chargesByContract.get(id) || [])
         };
     }).sort((a, b) => a.clientName.localeCompare(b.clientName, 'es'));
 }
@@ -860,32 +1012,128 @@ async function handleApi(request, response, url) {
         const client = clients.find(item => item.id === clientId) || null;
         const contract = validateContract(input, client, existing);
         await saveContract(contract);
-        const payments = await getContractPayments(contract.id);
         return jsonResponse(response, existing ? 200 : 201, {
-            contract: { ...contract, payments: payments.map(({ month, paidAt }) => ({ month, paidAt })) }
+            contract: await getContractDetails(contract)
         });
     }
-    const contractPaymentRoute = path.match(/^\/api\/contracts\/([^/]+)\/payments\/([^/]+)$/);
-    if (contractPaymentRoute && ['PUT', 'DELETE'].includes(method)) {
-        const id = decodeURIComponent(contractPaymentRoute[1]);
-        const contractId = validateContractId(id);
-        const month = decodeURIComponent(contractPaymentRoute[2]);
-        if (!isValidContractMonth(month)) {
-            return jsonResponse(response, 400, { error: 'El mes del pago no es válido.' });
-        }
-        const contract = await getContract(contractId);
+    const startCollectionRoute = path.match(/^\/api\/contracts\/([^/]+)\/collection\/start$/);
+    if (startCollectionRoute && method === 'POST') {
+        const id = validateContractId(decodeURIComponent(startCollectionRoute[1]));
+        const contract = await getContract(id);
         if (!contract) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
-        if (month < contract.startMonth || (contract.endMonth && month > contract.endMonth)) {
-            return jsonResponse(response, 400, { error: 'El contrato no está vigente durante ese mes.' });
+        if (contract.collectionStartedAt) {
+            return jsonResponse(response, 409, { error: 'El cobro de este contrato ya está iniciado.' });
+        }
+        const today = getCurrentPanamaDate();
+        const startDate = getContractStartDate(contract);
+        const endDate = getContractEndDate(contract);
+        if (startDate > today) {
+            return jsonResponse(response, 400, { error: 'La fecha de inicio del contrato todavía no ha llegado.' });
+        }
+        if (endDate && today > endDate) {
+            return jsonResponse(response, 400, { error: 'La vigencia del contrato ya finalizó.' });
+        }
+        const updatedContract = {
+            ...contract,
+            id,
+            startDate,
+            endDate,
+            billingIntervalDays: contract.billingIntervalDays || 30,
+            collectionStartedAt: today,
+            updatedAt: new Date().toISOString()
+        };
+        await saveContract(updatedContract);
+        return jsonResponse(response, 200, { contract: await getContractDetails(updatedContract) });
+    }
+    const chargePaymentRoute = path.match(/^\/api\/contracts\/([^/]+)\/charges\/([^/]+)\/payment$/);
+    if (chargePaymentRoute && ['PUT', 'DELETE'].includes(method)) {
+        const id = validateContractId(decodeURIComponent(chargePaymentRoute[1]));
+        const dueDate = decodeURIComponent(chargePaymentRoute[2]);
+        if (!isValidContractPaymentDate(dueDate)) {
+            return jsonResponse(response, 400, { error: 'La fecha del cobro no es válida.' });
+        }
+        const contract = await getContract(id);
+        if (!contract) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
+        const activationDate = getContractActivationDate(contract);
+        if (!activationDate) {
+            return jsonResponse(response, 400, { error: 'Primero debes empezar a cobrar este contrato.' });
+        }
+        const charges = await getContractCharges(id);
+        const nextChargeDate = getNextChargeDueDate(contract, charges);
+        const existingCharge = charges.find(charge => charge.dueDate === dueDate);
+        if (!existingCharge) {
+            return jsonResponse(response, 409, {
+                error: method === 'PUT' ? 'Primero define el monto de este cobro.' : 'No se encontró el período de cobro.'
+            });
         }
         if (method === 'PUT') {
+            if (dueDate !== nextChargeDate) {
+                return jsonResponse(response, 409, { error: 'Este ya no es el período de cobro pendiente.' });
+            }
             const body = await readJson(request);
             const paidAt = validateContractPaymentDate(body?.paidAt);
-            await saveContractPayment(contractId, month, paidAt);
-            return jsonResponse(response, 200, { payment: { month, paidAt } });
+            const today = getCurrentPanamaDate();
+            if (paidAt < activationDate || paidAt > today) {
+                return jsonResponse(response, 400, { error: 'La fecha de pago debe estar entre el inicio del cobro y hoy.' });
+            }
+            if (existingCharge.paidAt) {
+                return jsonResponse(response, 409, { error: 'Este cobro ya está pagado.' });
+            }
+            await saveContractCharge(id, dueDate, existingCharge.amount, paidAt);
+            return jsonResponse(response, 200, {
+                charge: { dueDate, amount: existingCharge.amount, paidAt },
+                contract: await getContractDetails({ ...contract, id })
+            });
         }
-        await removeContractPayment(contractId, month);
-        return jsonResponse(response, 200, { deleted: true });
+        const latestPaidCharge = charges
+            .filter(charge => charge.paidAt)
+            .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+            .at(-1);
+        if (!existingCharge.paidAt || latestPaidCharge?.dueDate !== dueDate) {
+            return jsonResponse(response, 409, { error: 'Solo se puede revertir el pago más reciente.' });
+        }
+        await saveContractCharge(id, dueDate, existingCharge.amount);
+        return jsonResponse(response, 200, {
+            charge: { dueDate, amount: existingCharge.amount, paidAt: '' },
+            contract: await getContractDetails({ ...contract, id })
+        });
+    }
+    const contractChargeRoute = path.match(/^\/api\/contracts\/([^/]+)\/charges\/([^/]+)$/);
+    if (contractChargeRoute && method === 'PUT') {
+        const id = validateContractId(decodeURIComponent(contractChargeRoute[1]));
+        const dueDate = decodeURIComponent(contractChargeRoute[2]);
+        if (!isValidContractPaymentDate(dueDate)) {
+            return jsonResponse(response, 400, { error: 'La fecha del cobro no es válida.' });
+        }
+        const contract = await getContract(id);
+        if (!contract) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
+        if (!contract.collectionStartedAt) {
+            return jsonResponse(response, 400, { error: 'Primero debes empezar a cobrar este contrato.' });
+        }
+        const charges = await getContractCharges(id);
+        if (getNextChargeDueDate(contract, charges) !== dueDate) {
+            return jsonResponse(response, 409, { error: 'Este ya no es el período de cobro pendiente.' });
+        }
+        const existingCharge = charges.find(charge => charge.dueDate === dueDate);
+        if (existingCharge?.paidAt) {
+            return jsonResponse(response, 409, { error: 'No se puede cambiar el monto de un cobro pagado.' });
+        }
+        const body = await readJson(request);
+        const rawAmount = body?.amount;
+        const amount = typeof rawAmount === 'number' ||
+            (typeof rawAmount === 'string' && rawAmount.trim() !== '')
+            ? Number(rawAmount)
+            : Number.NaN;
+        const roundedAmount = Math.round(amount * 100) / 100;
+        if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000 ||
+            Math.abs(amount - roundedAmount) > 1e-8) {
+            return jsonResponse(response, 400, { error: 'El monto del cobro debe ser mayor que cero y tener hasta dos decimales.' });
+        }
+        await saveContractCharge(id, dueDate, roundedAmount);
+        return jsonResponse(response, 200, {
+            charge: { dueDate, amount: roundedAmount, paidAt: '' },
+            contract: await getContractDetails({ ...contract, id })
+        });
     }
     const contractRoute = path.match(/^\/api\/contracts\/([^/]+)$/);
     if (contractRoute && method === 'DELETE') {

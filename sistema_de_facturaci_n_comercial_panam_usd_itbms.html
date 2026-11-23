@@ -933,12 +933,12 @@
         <section id="contracts-view" class="hidden space-y-6">
             <div class="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                 <div>
-                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Contratos mensuales</h1>
-                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Registra el compromiso mensual de cada cliente y controla pagos completos con su fecha. Este módulo no crea facturas automáticamente.</p>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Contratos y cobros recurrentes</h1>
+                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Primero registra e imprime el contrato con el membrete del emisor. Después, «Empezar a cobrar» activa períodos recurrentes de 1 a 30 días; el monto se define en cada período y no se crean facturas.</p>
                 </div>
                 <div class="flex flex-wrap items-end gap-2">
                     <div>
-                        <label for="contracts-month" class="mb-1 block text-xs font-semibold text-slate-600">Período de seguimiento</label>
+                        <label for="contracts-month" class="mb-1 block text-xs font-semibold text-slate-600">Mes de vencimiento</label>
                         <input id="contracts-month" type="month" onchange="renderContracts()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <button type="button" onclick="downloadContractsCsv()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">CSV mensual</button>
@@ -948,11 +948,11 @@
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p class="text-xs font-semibold uppercase text-slate-500">Contratos vigentes</p>
+                    <p class="text-xs font-semibold uppercase text-slate-500">Períodos del mes</p>
                     <p id="contract-month-count" class="mt-2 text-2xl font-extrabold text-slate-900">0</p>
                 </article>
                 <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p class="text-xs font-semibold uppercase text-slate-500">Compromiso del mes</p>
+                    <p class="text-xs font-semibold uppercase text-slate-500">Montos definidos</p>
                     <p id="contract-month-expected" class="mt-2 text-2xl font-extrabold text-slate-900">$0.00</p>
                 </article>
                 <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -968,7 +968,7 @@
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="border-b border-slate-100 p-5">
                     <h2 class="font-bold text-slate-900">Seguimiento de pagos</h2>
-                    <p class="mt-1 text-xs text-slate-500">Los vencimientos configurados entre los días 29 y 31 se ajustan al último día disponible del mes.</p>
+                    <p class="mt-1 text-xs text-slate-500">El primer período vence N días después de activar el cobro; cada siguiente período vence N días después del pago anterior, o del vencimiento si se pagó antes. Si sigue pendiente, no se genera otro período.</p>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[900px] text-left text-sm">
@@ -978,15 +978,15 @@
                         <tbody id="contract-payments-tbody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
-                <p id="contract-payments-empty" class="hidden p-8 text-center text-sm text-slate-500">No hay contratos vigentes para este período.</p>
+                <p id="contract-payments-empty" class="hidden p-8 text-center text-sm text-slate-500">No hay cobros activos para este período. Registra un contrato y selecciona «Empezar a cobrar».</p>
             </section>
 
             <form id="contract-form" onsubmit="saveContractForm(event)" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <input type="hidden" id="contract-id">
                 <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h2 id="contract-form-title" class="text-base font-bold text-slate-900">Crear contrato mensual</h2>
-                        <p class="mt-1 text-xs text-slate-500">Vincula el contrato con un cliente guardado en el catálogo.</p>
+                        <h2 id="contract-form-title" class="text-base font-bold text-slate-900">Crear contrato</h2>
+                        <p class="mt-1 text-xs text-slate-500">El PDF usará los datos del emisor configurados en Facturación.</p>
                     </div>
                     <button type="button" onclick="switchTab('clients')" class="text-xs font-semibold text-emerald-700 hover:text-emerald-600">Administrar clientes</button>
                 </div>
@@ -1000,20 +1000,16 @@
                         <input id="contract-description" required maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <div>
-                        <label for="contract-monthly-amount" class="mb-1 block text-xs font-semibold text-slate-700">Monto mensual (USD) *</label>
-                        <input id="contract-monthly-amount" type="number" min="0.01" max="1000000000" step="0.01" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <label for="contract-interval-days" class="mb-1 block text-xs font-semibold text-slate-700">Plan: días entre cobros *</label>
+                        <input id="contract-interval-days" type="number" min="1" max="30" step="1" value="30" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <div>
-                        <label for="contract-due-day" class="mb-1 block text-xs font-semibold text-slate-700">Día de vencimiento *</label>
-                        <input id="contract-due-day" type="number" min="1" max="31" step="1" value="1" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <label for="contract-start-date" class="mb-1 block text-xs font-semibold text-slate-700">Fecha de inicio del contrato *</label>
+                        <input id="contract-start-date" type="date" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <div>
-                        <label for="contract-start-month" class="mb-1 block text-xs font-semibold text-slate-700">Mes de inicio *</label>
-                        <input id="contract-start-month" type="month" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                    </div>
-                    <div>
-                        <label for="contract-end-month" class="mb-1 block text-xs font-semibold text-slate-700">Mes de finalización (opcional)</label>
-                        <input id="contract-end-month" type="month" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <label for="contract-end-date" class="mb-1 block text-xs font-semibold text-slate-700">Fecha de finalización (opcional)</label>
+                        <input id="contract-end-date" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <div class="sm:col-span-2 lg:col-span-3">
                         <label for="contract-notes" class="mb-1 block text-xs font-semibold text-slate-700">Notas</label>
@@ -1037,7 +1033,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[850px] text-left text-sm">
                         <thead class="bg-slate-50 text-xs uppercase text-slate-500">
-                            <tr><th class="px-4 py-3">Cliente / concepto</th><th class="px-4 py-3 text-right">Monto mensual</th><th class="px-4 py-3">Vigencia</th><th class="px-4 py-3">Vence el día</th><th class="px-4 py-3 text-right">Acciones</th></tr>
+                            <tr><th class="px-4 py-3">Cliente / concepto</th><th class="px-4 py-3">Plan</th><th class="px-4 py-3">Vigencia</th><th class="px-4 py-3">Estado de cobro</th><th class="px-4 py-3 text-right">Acciones</th></tr>
                         </thead>
                         <tbody id="contracts-tbody" class="divide-y divide-slate-100"></tbody>
                     </table>
@@ -3541,33 +3537,117 @@
             return year >= 1900 && year <= 9999;
         }
 
-        function getContractDueDate(month, dueDay) {
-            if (!isValidContractMonth(month) || !Number.isInteger(Number(dueDay)) ||
-                Number(dueDay) < 1 || Number(dueDay) > 31) return '';
-            const [year, monthNumber] = month.split('-').map(Number);
-            const lastDay = new Date(year, monthNumber, 0).getDate();
-            return `${month}-${String(Math.min(Number(dueDay), lastDay)).padStart(2, '0')}`;
+        function isValidContractDate(date) {
+            if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+            const timestamp = Date.parse(`${date}T00:00:00Z`);
+            return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date;
         }
 
-        function getContractMonthSnapshot(contract, month, today = getTodayISO()) {
-            const payment = (contract.payments || []).find(item => item.month === month) || null;
-            const dueDate = getContractDueDate(month, Number(contract.dueDay));
-            return {
-                payment,
-                dueDate,
-                status: payment ? 'Pagado' : dueDate && dueDate < today ? 'Vencido' : 'Pendiente'
-            };
+        function addContractDays(date, days) {
+            if (!isValidContractDate(date) || !Number.isInteger(Number(days)) ||
+                Number(days) < 1 || Number(days) > 30) return '';
+            const value = new Date(`${date}T00:00:00Z`);
+            value.setUTCDate(value.getUTCDate() + Number(days));
+            return value.toISOString().slice(0, 10);
+        }
+
+        function getContractNextChargeDate(contract) {
+            if (!contract.collectionStartedAt) return '';
+            const latestPaidCharge = (contract.charges || [])
+                .filter(charge => charge.paidAt)
+                .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+                .at(-1);
+            const activationDate = contract.collectionStartedAt.slice(0, 10);
+            const baseDate = latestPaidCharge
+                ? (latestPaidCharge.paidAt > latestPaidCharge.dueDate
+                    ? latestPaidCharge.paidAt
+                    : latestPaidCharge.dueDate)
+                : activationDate;
+            const nextDate = addContractDays(
+                baseDate,
+                Number(contract.billingIntervalDays || 30)
+            );
+            return contract.endDate && nextDate > contract.endDate ? '' : nextDate;
+        }
+
+        function getChargeStatus(dueDate, paidAt, today) {
+            if (paidAt) return 'Pagado';
+            if (dueDate < today) return 'Vencido';
+            if (dueDate > today) return 'Programado';
+            return 'Pendiente';
         }
 
         function getContractMonthRows(month, today = getTodayISO()) {
-            return savedContracts
-                .filter(contract => contract.startMonth <= month && (!contract.endMonth || month <= contract.endMonth))
-                .map(contract => ({
-                    contract,
-                    clientName: getContractClientName(contract),
-                    amount: Number(contract.monthlyAmount) || 0,
-                    ...getContractMonthSnapshot(contract, month, today)
-                }));
+            const rows = [];
+            savedContracts.forEach(contract => {
+                const charges = contract.charges || [];
+                const latestPaidDate = charges
+                    .filter(charge => charge.paidAt)
+                    .map(charge => charge.dueDate)
+                    .sort()
+                    .at(-1);
+                charges
+                    .filter(charge => charge.dueDate.slice(0, 7) === month)
+                    .forEach(charge => rows.push({
+                        contract,
+                        clientName: getContractClientName(contract),
+                        dueDate: charge.dueDate,
+                        amount: charge.amount,
+                        paidAt: charge.paidAt,
+                        charge,
+                        isCurrent: charge.dueDate === getContractNextChargeDate(contract),
+                        isLatestPaid: charge.dueDate === latestPaidDate && Boolean(charge.paidAt),
+                        legacy: false,
+                        status: getChargeStatus(charge.dueDate, charge.paidAt, today)
+                    }));
+
+                const nextChargeDate = getContractNextChargeDate(contract);
+                if (nextChargeDate && nextChargeDate.slice(0, 7) === month &&
+                    !charges.some(charge => charge.dueDate === nextChargeDate)) {
+                    rows.push({
+                        contract,
+                        clientName: getContractClientName(contract),
+                        dueDate: nextChargeDate,
+                        amount: null,
+                        paidAt: '',
+                        charge: null,
+                        isCurrent: true,
+                        isLatestPaid: false,
+                        legacy: false,
+                        status: getChargeStatus(nextChargeDate, '', today)
+                    });
+                }
+
+                (contract.payments || [])
+                    .filter(payment => payment.month === month)
+                    .forEach(payment => rows.push({
+                        contract,
+                        clientName: getContractClientName(contract),
+                        dueDate: `${month}-01`,
+                        amount: Number(contract.monthlyAmount) || null,
+                        paidAt: payment.paidAt,
+                        charge: null,
+                        isCurrent: false,
+                        isLatestPaid: false,
+                        legacy: true,
+                        status: 'Pagado'
+                    }));
+            });
+            return rows.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+        }
+
+        function getContractCollectionState(contract, today = getTodayISO()) {
+            const startDate = contract.startDate || `${contract.startMonth}-01`;
+            const endDate = contract.endDate || '';
+            if (!contract.collectionStartedAt) {
+                if (startDate > today) return { label: `Inicia ${formatDateReadable(startDate)}`, canStart: false };
+                const ended = endDate && endDate < today;
+                return { label: ended ? 'Vigencia finalizada' : 'Solo registrado', canStart: !ended };
+            }
+            if (endDate && endDate < today) {
+                return { label: 'Cobro finalizado', canStart: false };
+            }
+            return { label: 'Cobro activo', canStart: false };
         }
 
         function getContractClientName(contract) {
@@ -3603,14 +3683,13 @@
             currentEditingContractId = null;
             document.getElementById('contract-form').reset();
             document.getElementById('contract-id').value = '';
-            document.getElementById('contract-form-title').textContent = 'Crear contrato mensual';
+            document.getElementById('contract-form-title').textContent = 'Crear contrato';
             document.getElementById('contract-form-submit').textContent = 'Guardar contrato';
             document.getElementById('contract-form-cancel').classList.add('hidden');
-            document.getElementById('contract-due-day').value = '1';
-            const month = document.getElementById('contracts-month').value || getTodayISO().slice(0, 7);
-            document.getElementById('contract-start-month').value = isValidContractMonth(month)
-                ? month
-                : getTodayISO().slice(0, 7);
+            document.getElementById('contract-interval-days').value = '30';
+            document.getElementById('contract-interval-days').disabled = false;
+            document.getElementById('contract-start-date').value = getTodayISO();
+            document.getElementById('contract-end-date').value = '';
             renderContractClientSelect('');
         }
 
@@ -3627,21 +3706,24 @@
             const contractRows = getContractMonthRows(month, today);
             const tbody = document.getElementById('contract-payments-tbody');
             tbody.replaceChildren();
-            let expected = 0;
+            let definedAmount = 0;
             let paid = 0;
             let overdue = 0;
 
-            contractRows.forEach(({ contract, clientName: clientDisplayName, amount, payment, dueDate, status }) => {
-                expected += amount;
-                if (payment) paid += amount;
-                else if (status === 'Vencido') overdue += amount;
+            contractRows.forEach(rowData => {
+                const { contract, clientName: clientDisplayName, amount, paidAt, dueDate, status, charge, isCurrent, isLatestPaid, legacy } = rowData;
+                const hasAmount = Number.isFinite(Number(amount)) && Number(amount) > 0;
+                if (hasAmount) definedAmount += Number(amount);
+                if (paidAt && hasAmount) paid += Number(amount);
+                else if (status === 'Vencido' && hasAmount) overdue += Number(amount);
+                let chargeAmountInput = null;
 
                 const row = document.createElement('tr');
                 const clientCell = document.createElement('td');
                 clientCell.className = 'px-4 py-3';
                 const clientName = document.createElement('p');
                 clientName.className = 'font-semibold text-slate-800';
-                clientName.textContent = clientDisplayName;
+                clientName.textContent = rowData.clientName;
                 const description = document.createElement('p');
                 description.className = 'mt-0.5 text-xs text-slate-500';
                 description.textContent = contract.description;
@@ -3652,8 +3734,22 @@
                 dueCell.textContent = formatDateReadable(dueDate);
 
                 const amountCell = document.createElement('td');
-                amountCell.className = 'px-4 py-3 text-right font-semibold text-slate-800';
-                amountCell.textContent = formatUSD(amount);
+                amountCell.className = 'px-4 py-3 text-right';
+                if (paidAt || legacy) {
+                    amountCell.textContent = hasAmount ? formatUSD(Number(amount)) : '—';
+                    amountCell.classList.add('font-semibold', 'text-slate-800');
+                } else {
+                    chargeAmountInput = document.createElement('input');
+                    chargeAmountInput.type = 'number';
+                    chargeAmountInput.min = '0.01';
+                    chargeAmountInput.max = '1000000000';
+                    chargeAmountInput.step = '0.01';
+                    chargeAmountInput.value = hasAmount ? String(amount) : '';
+                    chargeAmountInput.id = `contract-charge-amount-${contract.id}-${dueDate}`;
+                    chargeAmountInput.setAttribute('aria-label', `Monto del cobro de ${clientDisplayName}`);
+                    chargeAmountInput.className = 'w-36 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm';
+                    amountCell.appendChild(chargeAmountInput);
+                }
 
                 const statusCell = document.createElement('td');
                 statusCell.className = 'px-4 py-3';
@@ -3663,36 +3759,57 @@
                         ? 'bg-emerald-50 text-emerald-700'
                         : status === 'Vencido'
                             ? 'bg-rose-50 text-rose-700'
-                            : 'bg-amber-50 text-amber-700'
+                            : status === 'Programado'
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'bg-amber-50 text-amber-700'
                 }`;
-                statusBadge.textContent = status;
+                statusBadge.textContent = !paidAt && !hasAmount ? `${status} · monto por definir` : status;
                 statusCell.appendChild(statusBadge);
 
                 const actionCell = document.createElement('td');
                 actionCell.className = 'px-4 py-3';
                 const actionGroup = document.createElement('div');
                 actionGroup.className = 'flex flex-wrap items-center gap-2';
-                const dateInput = document.createElement('input');
-                dateInput.type = 'date';
-                dateInput.id = `contract-payment-date-${contract.id}`;
-                dateInput.value = payment?.paidAt || today;
-                dateInput.setAttribute('aria-label', `Fecha del pago: ${clientDisplayName}`);
-                dateInput.className = 'rounded-lg border border-slate-300 px-2 py-1.5 text-xs';
-                const saveButton = document.createElement('button');
-                saveButton.type = 'button';
-                saveButton.className = 'rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500';
-                saveButton.textContent = payment ? 'Actualizar pago' : 'Registrar pago';
-                saveButton.addEventListener('click', () =>
-                    saveContractPaymentRecord(contract.id, month, dateInput.value, saveButton)
-                );
-                actionGroup.append(dateInput, saveButton);
-                if (payment) {
-                    const pendingButton = document.createElement('button');
-                    pendingButton.type = 'button';
-                    pendingButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
-                    pendingButton.textContent = 'Marcar pendiente';
-                    pendingButton.addEventListener('click', () => requestRemoveContractPayment(contract.id, month));
-                    actionGroup.appendChild(pendingButton);
+                if (paidAt) {
+                    const paidDate = document.createElement('span');
+                    paidDate.className = 'text-xs text-slate-600';
+                    paidDate.textContent = `Pagado el ${formatDateReadable(paidAt)}`;
+                    actionGroup.appendChild(paidDate);
+                    if (isLatestPaid) {
+                        const revertButton = document.createElement('button');
+                        revertButton.type = 'button';
+                        revertButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
+                        revertButton.textContent = 'Revertir último pago';
+                        revertButton.addEventListener('click', () =>
+                            requestReverseContractChargePayment(contract.id, dueDate)
+                        );
+                        actionGroup.appendChild(revertButton);
+                    }
+                } else if (isCurrent && !legacy) {
+                    const saveAmountButton = document.createElement('button');
+                    saveAmountButton.type = 'button';
+                    saveAmountButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
+                    saveAmountButton.textContent = charge ? 'Actualizar monto' : 'Definir monto';
+                    saveAmountButton.addEventListener('click', () =>
+                        saveContractChargeAmount(contract.id, dueDate, chargeAmountInput.value, saveAmountButton)
+                    );
+                    actionGroup.appendChild(saveAmountButton);
+                    if (hasAmount) {
+                        const dateInput = document.createElement('input');
+                        dateInput.type = 'date';
+                        dateInput.max = today;
+                        dateInput.value = today;
+                        dateInput.setAttribute('aria-label', `Fecha del pago: ${rowData.clientName}`);
+                        dateInput.className = 'rounded-lg border border-slate-300 px-2 py-1.5 text-xs';
+                        const payButton = document.createElement('button');
+                        payButton.type = 'button';
+                        payButton.className = 'rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500';
+                        payButton.textContent = 'Registrar pago';
+                        payButton.addEventListener('click', () =>
+                            registerContractChargePayment(contract.id, dueDate, dateInput.value, payButton)
+                        );
+                        actionGroup.append(dateInput, payButton);
+                    }
                 }
                 actionCell.appendChild(actionGroup);
                 row.append(clientCell, dueCell, amountCell, statusCell, actionCell);
@@ -3700,7 +3817,7 @@
             });
 
             document.getElementById('contract-month-count').textContent = contractRows.length.toLocaleString('es-PA');
-            document.getElementById('contract-month-expected').textContent = formatUSD(expected);
+            document.getElementById('contract-month-expected').textContent = formatUSD(definedAmount);
             document.getElementById('contract-month-paid').textContent = formatUSD(paid);
             document.getElementById('contract-month-overdue').textContent = formatUSD(overdue);
             document.getElementById('contract-payments-empty').classList.toggle('hidden', contractRows.length > 0);
@@ -3708,17 +3825,17 @@
 
         function getContractExportRows() {
             const month = document.getElementById('contracts-month').value;
-            return getContractMonthRows(month).map(({ contract, clientName, amount, payment, dueDate, status }) => [
+            return getContractMonthRows(month).map(({ contract, clientName, dueDate, amount, status, paidAt }) => [
                 month,
                 clientName,
                 contract.description,
-                amount,
-                contract.dueDay,
                 dueDate,
+                amount ?? '',
                 status,
-                payment?.paidAt || '',
-                contract.startMonth,
-                contract.endMonth || '',
+                paidAt || '',
+                contract.billingIntervalDays,
+                contract.startDate || `${contract.startMonth}-01`,
+                contract.endDate || '',
                 contract.notes || ''
             ]);
         }
@@ -3726,16 +3843,16 @@
         function downloadContractsCsv() {
             const month = document.getElementById('contracts-month').value;
             downloadCsvFile(`facturapro-contratos-${month}`, [
-                'Período',
+                'Mes de vencimiento',
                 'Cliente',
                 'Servicio / concepto',
-                'Monto mensual USD',
-                'Día de vencimiento',
                 'Fecha de vencimiento',
+                'Monto del período USD',
                 'Estado',
                 'Fecha de pago',
-                'Inicio',
-                'Finalización',
+                'Intervalo en días',
+                'Inicio del contrato',
+                'Finalización del contrato',
                 'Notas'
             ], getContractExportRows());
         }
@@ -3743,39 +3860,118 @@
         function printContractsPdf() {
             const month = document.getElementById('contracts-month').value;
             const rows = getContractMonthRows(month);
-            const expected = rows.reduce((total, row) => total + row.amount, 0);
-            const paid = rows.reduce((total, row) => total + (row.payment ? row.amount : 0), 0);
-            const overdue = rows.reduce((total, row) => total + (row.status === 'Vencido' ? row.amount : 0), 0);
+            const definedAmount = rows.reduce((total, row) => total + (Number(row.amount) || 0), 0);
+            const paid = rows.reduce((total, row) => total + (row.paidAt ? Number(row.amount) || 0 : 0), 0);
+            const overdue = rows.reduce((total, row) =>
+                total + (row.status === 'Vencido' ? Number(row.amount) || 0 : 0), 0);
             const report = createPrintDocument(
-                `Contratos mensuales - ${month}`,
-                `${rows.length.toLocaleString('es-PA')} contrato(s) vigente(s) • USD`
+                `Seguimiento de cobros - ${month}`,
+                `${rows.length.toLocaleString('es-PA')} período(s) de cobro • USD`
             );
             if (!report) return;
             appendPrintTable(report.printDocument, report.printDocument.body, ['Resumen', 'Monto USD'], [
-                ['Compromiso mensual', formatUSD(expected)],
+                ['Montos definidos', formatUSD(definedAmount)],
                 ['Pagado', formatUSD(paid)],
                 ['Vencido pendiente', formatUSD(overdue)]
             ]);
             appendPrintTable(report.printDocument, report.printDocument.body, [
                 'Cliente',
                 'Servicio / concepto',
-                'Monto mensual USD',
+                'Monto USD',
                 'Vencimiento',
                 'Estado',
                 'Fecha de pago',
-                'Vigencia',
+                'Intervalo',
                 'Notas'
-            ], rows.map(({ contract, clientName, amount, payment, dueDate, status }) => [
+            ], rows.map(({ contract, clientName, amount, paidAt, dueDate, status }) => [
                 clientName,
                 contract.description,
-                formatUSD(amount),
+                amount ? formatUSD(amount) : 'Por definir',
                 formatDateReadable(dueDate),
                 status,
-                payment?.paidAt ? formatDateReadable(payment.paidAt) : '—',
-                `${contract.startMonth} – ${contract.endMonth || 'Indefinido'}`,
+                paidAt ? formatDateReadable(paidAt) : '—',
+                `${contract.billingIntervalDays} días`,
                 contract.notes || '—'
             ]));
             launchPrintDialog(report.printWindow);
+        }
+
+        function printContractPdf(id) {
+            const contract = savedContracts.find(item => item.id === id);
+            if (!contract) return;
+            const catalogClient = savedClients.find(item => item.id === contract.clientId);
+            const client = {
+                name: catalogClient?.name || contract.clientName,
+                ruc: catalogClient?.ruc || contract.clientRuc || '',
+                dv: catalogClient?.dv || contract.clientDv || '',
+                phone: catalogClient?.phone || contract.clientPhone || '',
+                email: catalogClient?.email || contract.clientEmail || '',
+                address: catalogClient?.address || contract.clientAddress || ''
+            };
+            const issuer = {
+                name: document.getElementById('issuer-name').value.trim() || 'FacturaPro Panamá',
+                ruc: document.getElementById('issuer-ruc').value.trim(),
+                dv: document.getElementById('issuer-dv').value.trim(),
+                phone: document.getElementById('issuer-phone').value.trim(),
+                email: document.getElementById('issuer-email').value.trim(),
+                address: document.getElementById('issuer-address').value.trim()
+            };
+            const issuerDetails = [
+                issuer.ruc ? `RUC: ${issuer.ruc}` : '',
+                issuer.dv ? `DV: ${issuer.dv}` : '',
+                issuer.address,
+                issuer.phone ? `Tel: ${issuer.phone}` : '',
+                issuer.email
+            ].filter(Boolean).join(' • ');
+            const report = createPrintDocument(
+                issuer.name,
+                issuerDetails || 'FacturaPro Panamá'
+            );
+            if (!report) return;
+            const { printDocument, printWindow } = report;
+            const contractTitle = printDocument.createElement('h2');
+            contractTitle.textContent = 'CONTRATO DE SERVICIOS';
+            printDocument.body.appendChild(contractTitle);
+            appendPrintFields(printDocument, printDocument.body, [
+                ['Contrato', contract.id],
+                ['Fecha de registro', formatDateReadable(contract.createdAt?.slice(0, 10))],
+                ['Cliente / razón social', client.name],
+                ['RUC / identificación', client.ruc],
+                ['D.V.', client.dv],
+                ['Teléfono', client.phone],
+                ['Correo electrónico', client.email],
+                ['Dirección', client.address],
+                ['Servicio / concepto', contract.description],
+                ['Intervalo de cobro', `Cada ${contract.billingIntervalDays || 30} días`],
+                ['Fecha de inicio', formatDateReadable(contract.startDate || `${contract.startMonth}-01`)],
+                ['Fecha de finalización', contract.endDate ? formatDateReadable(contract.endDate) : 'Indefinida'],
+                ['Estado', getContractCollectionState(contract).label],
+                ['Inicio del cobro', contract.collectionStartedAt ? formatDateReadable(contract.collectionStartedAt.slice(0, 10)) : 'Aún no iniciado'],
+                ['Notas', contract.notes || '—']
+            ]);
+            const note = printDocument.createElement('p');
+            note.textContent = 'Este documento refleja las condiciones registradas. El seguimiento de cobros se activa por separado, el monto se define en cada período y no se generan facturas automáticamente.';
+            printDocument.body.appendChild(note);
+            const signatureTitle = printDocument.createElement('h3');
+            signatureTitle.textContent = 'Aceptación y firmas';
+            printDocument.body.appendChild(signatureTitle);
+            const signatureGrid = printDocument.createElement('div');
+            signatureGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:64px;';
+            [
+                [`Por el emisor: ${issuer.name}`, 'Nombre y firma'],
+                [`Por el cliente: ${client.name}`, 'Nombre y firma']
+            ].forEach(([name, label]) => {
+                const signature = printDocument.createElement('div');
+                signature.style.cssText = 'border-top:1px solid #334155;padding-top:8px;min-height:44px;';
+                const nameLine = printDocument.createElement('p');
+                nameLine.textContent = name;
+                const signatureLine = printDocument.createElement('p');
+                signatureLine.textContent = label;
+                signature.append(nameLine, signatureLine);
+                signatureGrid.appendChild(signature);
+            });
+            printDocument.body.appendChild(signatureGrid);
+            launchPrintDialog(printWindow);
         }
 
         function renderContractList() {
@@ -3796,19 +3992,36 @@
                 description.textContent = contract.description;
                 clientCell.append(name, description);
 
-                const amountCell = document.createElement('td');
-                amountCell.className = 'px-4 py-3 text-right font-semibold text-slate-800';
-                amountCell.textContent = formatUSD(Number(contract.monthlyAmount) || 0);
+                const planCell = document.createElement('td');
+                planCell.className = 'px-4 py-3 whitespace-nowrap text-slate-600';
+                planCell.textContent = `Cada ${contract.billingIntervalDays || 30} días`;
                 const termCell = document.createElement('td');
                 termCell.className = 'px-4 py-3 whitespace-nowrap text-slate-600';
-                termCell.textContent = `${contract.startMonth} – ${contract.endMonth || 'Indefinido'}`;
-                const dueCell = document.createElement('td');
-                dueCell.className = 'px-4 py-3 text-slate-600';
-                dueCell.textContent = `Día ${contract.dueDay}`;
+                termCell.textContent = `${formatDateReadable(contract.startDate || `${contract.startMonth}-01`)} – ${contract.endDate ? formatDateReadable(contract.endDate) : 'Indefinido'}`;
+                const stateCell = document.createElement('td');
+                stateCell.className = 'px-4 py-3';
+                const state = getContractCollectionState(contract);
+                const stateBadge = document.createElement('span');
+                stateBadge.className = `inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    state.label === 'Cobro activo'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : state.label.startsWith('Inicia')
+                            ? 'bg-blue-50 text-blue-700'
+                            : state.label === 'Cobro finalizado' || state.label === 'Vigencia finalizada'
+                                ? 'bg-rose-50 text-rose-700'
+                                : 'bg-slate-100 text-slate-600'
+                }`;
+                stateBadge.textContent = state.label;
+                stateCell.appendChild(stateBadge);
                 const actionsCell = document.createElement('td');
                 actionsCell.className = 'px-4 py-3 text-right';
                 const actions = document.createElement('div');
-                actions.className = 'inline-flex gap-2';
+                actions.className = 'flex flex-wrap justify-end gap-2';
+                const pdfButton = document.createElement('button');
+                pdfButton.type = 'button';
+                pdfButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
+                pdfButton.textContent = 'PDF';
+                pdfButton.addEventListener('click', () => printContractPdf(contract.id));
                 const editButton = document.createElement('button');
                 editButton.type = 'button';
                 editButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
@@ -3819,9 +4032,17 @@
                 deleteButton.className = 'rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50';
                 deleteButton.textContent = 'Eliminar';
                 deleteButton.addEventListener('click', () => requestDeleteContract(contract.id));
-                actions.append(editButton, deleteButton);
+                actions.append(pdfButton, editButton, deleteButton);
+                if (state.canStart) {
+                    const startButton = document.createElement('button');
+                    startButton.type = 'button';
+                    startButton.className = 'rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500';
+                    startButton.textContent = 'Empezar a cobrar';
+                    startButton.addEventListener('click', () => requestStartContractCollection(contract.id));
+                    actions.appendChild(startButton);
+                }
                 actionsCell.appendChild(actions);
-                row.append(clientCell, amountCell, termCell, dueCell, actionsCell);
+                row.append(clientCell, planCell, termCell, stateCell, actionsCell);
                 tbody.appendChild(row);
             });
         }
@@ -3832,13 +4053,13 @@
             currentEditingContractId = id;
             document.getElementById('contract-id').value = contract.id;
             document.getElementById('contract-description').value = contract.description;
-            document.getElementById('contract-monthly-amount').value = contract.monthlyAmount;
-            document.getElementById('contract-due-day').value = contract.dueDay;
-            document.getElementById('contract-start-month').value = contract.startMonth;
-            document.getElementById('contract-end-month').value = contract.endMonth || '';
+            document.getElementById('contract-interval-days').value = String(contract.billingIntervalDays || 30);
+            document.getElementById('contract-interval-days').disabled = Boolean(contract.collectionStartedAt);
+            document.getElementById('contract-start-date').value = contract.startDate || `${contract.startMonth}-01`;
+            document.getElementById('contract-end-date').value = contract.endDate || '';
             document.getElementById('contract-notes').value = contract.notes || '';
             renderContractClientSelect(contract.clientId);
-            document.getElementById('contract-form-title').textContent = 'Editar contrato mensual';
+            document.getElementById('contract-form-title').textContent = 'Editar contrato';
             document.getElementById('contract-form-submit').textContent = 'Guardar cambios';
             document.getElementById('contract-form-cancel').classList.remove('hidden');
             document.getElementById('contract-description').focus();
@@ -3852,10 +4073,9 @@
                 ...(currentEditingContractId ? { id: currentEditingContractId } : {}),
                 clientId: document.getElementById('contract-client-id').value,
                 description: document.getElementById('contract-description').value.trim(),
-                monthlyAmount: Number(document.getElementById('contract-monthly-amount').value),
-                dueDay: Number(document.getElementById('contract-due-day').value),
-                startMonth: document.getElementById('contract-start-month').value,
-                endMonth: document.getElementById('contract-end-month').value,
+                billingIntervalDays: Number(document.getElementById('contract-interval-days').value),
+                startDate: document.getElementById('contract-start-date').value,
+                endDate: document.getElementById('contract-end-date').value,
                 notes: document.getElementById('contract-notes').value.trim()
             };
             button.disabled = true;
@@ -3877,7 +4097,50 @@
             }
         }
 
-        async function saveContractPaymentRecord(id, month, paidAt, button) {
+        function requestStartContractCollection(id) {
+            const contract = savedContracts.find(item => item.id === id);
+            if (!contract) return;
+            openContractConfirmation(
+                `Empezar a cobrar a ${getContractClientName(contract)}`,
+                `El primer cobro vencerá ${contract.billingIntervalDays || 30} días después de activar el seguimiento. No se generarán facturas.`,
+                'Empezar a cobrar',
+                async () => {
+                    const result = await apiRequest(
+                        `/api/contracts/${encodeURIComponent(id)}/collection/start`,
+                        { method: 'POST' }
+                    );
+                    const index = savedContracts.findIndex(item => item.id === id);
+                    if (index >= 0) savedContracts[index] = result.contract;
+                    renderContracts();
+                    showToast('El cobro recurrente quedó activo', 'success');
+                }
+            );
+        }
+
+        async function saveContractChargeAmount(id, dueDate, amount, button) {
+            const parsedAmount = Number(amount);
+            if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+                showToast('Ingresa un monto mayor que cero.', 'error');
+                return;
+            }
+            button.disabled = true;
+            try {
+                const result = await apiRequest(
+                    `/api/contracts/${encodeURIComponent(id)}/charges/${encodeURIComponent(dueDate)}`,
+                    { method: 'PUT', body: JSON.stringify({ amount: parsedAmount }) }
+                );
+                const index = savedContracts.findIndex(item => item.id === id);
+                if (index >= 0) savedContracts[index] = result.contract;
+                renderContracts();
+                showToast('Monto del período guardado', 'success');
+            } catch (error) {
+                showToast(`No se pudo guardar el monto: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function registerContractChargePayment(id, dueDate, paidAt, button) {
             if (!paidAt) {
                 showToast('Selecciona la fecha en que se recibió el pago.', 'error');
                 return;
@@ -3885,17 +4148,13 @@
             button.disabled = true;
             try {
                 const result = await apiRequest(
-                    `/api/contracts/${encodeURIComponent(id)}/payments/${encodeURIComponent(month)}`,
+                    `/api/contracts/${encodeURIComponent(id)}/charges/${encodeURIComponent(dueDate)}/payment`,
                     { method: 'PUT', body: JSON.stringify({ paidAt }) }
                 );
-                const contract = savedContracts.find(item => item.id === id);
-                if (contract) {
-                    contract.payments = (contract.payments || [])
-                        .filter(payment => payment.month !== month)
-                        .concat(result.payment);
-                }
+                const index = savedContracts.findIndex(item => item.id === id);
+                if (index >= 0) savedContracts[index] = result.contract;
                 renderContracts();
-                showToast('Pago mensual registrado', 'success');
+                showToast('Pago del período registrado', 'success');
             } catch (error) {
                 showToast(`No se pudo registrar el pago: ${error.message}`, 'error');
             } finally {
@@ -3924,20 +4183,20 @@
             modal.classList.add('flex');
         }
 
-        function requestRemoveContractPayment(id, month) {
+        function requestReverseContractChargePayment(id, dueDate) {
             openContractConfirmation(
-                'Quitar registro de pago',
-                `El pago de ${month} volverá a estar pendiente. Puedes volver a registrarlo después.`,
-                'Marcar pendiente',
+                'Revertir último pago',
+                `El período con vencimiento ${formatDateReadable(dueDate)} volverá a quedar pendiente.`,
+                'Revertir pago',
                 async () => {
-                    await apiRequest(
-                        `/api/contracts/${encodeURIComponent(id)}/payments/${encodeURIComponent(month)}`,
+                    const result = await apiRequest(
+                        `/api/contracts/${encodeURIComponent(id)}/charges/${encodeURIComponent(dueDate)}/payment`,
                         { method: 'DELETE' }
                     );
-                    const contract = savedContracts.find(item => item.id === id);
-                    if (contract) contract.payments = (contract.payments || []).filter(payment => payment.month !== month);
+                    const index = savedContracts.findIndex(item => item.id === id);
+                    if (index >= 0) savedContracts[index] = result.contract;
                     renderContracts();
-                    showToast('El pago volvió a quedar pendiente', 'success');
+                    showToast('El último pago fue revertido', 'success');
                 }
             );
         }
