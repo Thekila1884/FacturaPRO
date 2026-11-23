@@ -504,8 +504,11 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         if (String(input) === 'https://api.resend.com/emails') {
             resendRequests.push(JSON.parse(options.body));
             if (resendRequests.length === 1) {
-                return new Response(JSON.stringify({ error: 'temporary failure' }), {
-                    status: 503,
+                return new Response(JSON.stringify({
+                    name: 'validation_error',
+                    message: 'The example.com domain is not verified.'
+                }), {
+                    status: 403,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
@@ -538,6 +541,8 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         assert.equal(generatedInvoice.items[0].itbms, false);
         assert.equal(generatedInvoice.totals.grandTotal, 75);
         assert.equal(generatedInvoice.automaticContract.email.status, 'failed');
+        assert.match(generatedInvoice.automaticContract.email.error, /HTTP 403/);
+        assert.match(generatedInvoice.automaticContract.email.error, /domain is not verified/);
         const retryResult = await api(`/api/invoices/${generatedInvoice.id}/email/retry`, {
             method: 'POST',
             body: {}

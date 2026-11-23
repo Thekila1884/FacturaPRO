@@ -1086,7 +1086,20 @@ async function sendInvoiceEmail(invoice, issuer) {
         })
     });
     if (!response.ok) {
-        const error = new Error(`Resend rechazó el correo (HTTP ${response.status}).`);
+        let responseBody;
+        try {
+            responseBody = await response.json();
+        } catch (parseError) {
+            if (!(parseError instanceof SyntaxError)) throw parseError;
+        }
+        const providerMessage = typeof responseBody?.message === 'string'
+            ? responseBody.message
+            : typeof responseBody?.error === 'string'
+                ? responseBody.error
+                : '';
+        const safeProviderMessage = providerMessage.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 300);
+        const detail = safeProviderMessage ? `: ${safeProviderMessage}` : '';
+        const error = new Error(`Resend rechazó el correo (HTTP ${response.status})${detail}`);
         error.status = 502;
         throw error;
     }
