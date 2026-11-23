@@ -78,15 +78,19 @@ test('contract interval dates handle leap days and distinguish payment statuses'
     const context = createAppContext();
     const snapshot = JSON.parse(vm.runInContext(`JSON.stringify({
         leapDay: addContractDays('2024-02-28', 1),
+        annualDate: addContractDays('2025-02-01', 365),
         invalidDate: addContractDays('2025-02-30', 5),
         invalidInterval: addContractDays('2025-02-28', 31),
+        invalidAnnualInterval: addContractDays('2025-02-28', 364),
         overdue: getChargeStatus('2025-02-28', '', '2025-03-01'),
         paid: getChargeStatus('2025-02-28', '2025-02-28', '2025-03-01')
     })`, context));
 
     assert.equal(snapshot.leapDay, '2024-02-29');
+    assert.equal(snapshot.annualDate, '2026-02-01');
     assert.equal(snapshot.invalidDate, '');
     assert.equal(snapshot.invalidInterval, '');
+    assert.equal(snapshot.invalidAnnualInterval, '');
     assert.equal(snapshot.overdue, 'Vencido');
     assert.equal(snapshot.paid, 'Pagado');
 });

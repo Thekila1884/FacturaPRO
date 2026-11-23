@@ -407,6 +407,11 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     });
     await api('/api/contracts', {
         method: 'PUT',
+        body: { ...newContract, billingIntervalDays: 364 },
+        expected: 400
+    });
+    await api('/api/contracts', {
+        method: 'PUT',
         body: { ...newContract, clientId: 'unknown-client' },
         expected: 400
     });
@@ -455,6 +460,19 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     assert.deepEqual((await api('/api/contracts')).contracts, []);
     assert.equal(tables.facturapro_settings.some(row => row.key.startsWith(`contract-payment:${createdContract.id}:`)), false);
     assert.equal(tables.facturapro_settings.some(row => row.key.startsWith(`contract-charge:${createdContract.id}:`)), false);
+
+    const annualContract = (await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, billingIntervalDays: 365, description: 'Plan anual' },
+        expected: 201
+    })).contract;
+    assert.equal(annualContract.billingIntervalDays, 365);
+    const annualContractPath = `/api/contracts/${annualContract.id}`;
+    const activatedAnnualContract = (await api(`${annualContractPath}/collection/start`, {
+        method: 'POST'
+    })).contract;
+    assert.equal(activatedAnnualContract.nextChargeDate, addDays(today, 365));
+    await api(annualContractPath, { method: 'DELETE' });
 
     const earlyPaymentContract = (await api('/api/contracts', {
         method: 'PUT',

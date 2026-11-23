@@ -934,7 +934,7 @@
             <div class="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                 <div>
                     <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Contratos y cobros recurrentes</h1>
-                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Primero registra e imprime el contrato con el membrete del emisor. Después, «Empezar a cobrar» activa períodos recurrentes de 1 a 30 días. En cada contrato puedes elegir si se crean facturas automáticamente y si se envían por correo.</p>
+                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Primero registra e imprime el contrato con el membrete del emisor. Después, «Empezar a cobrar» activa períodos recurrentes de 1 a 30 días o un plan anual de 365 días. En cada contrato puedes elegir si se crean facturas automáticamente y si se envían por correo.</p>
                 </div>
                 <div class="flex flex-wrap items-end gap-2">
                     <div>
@@ -1001,7 +1001,8 @@
                     </div>
                     <div>
                         <label for="contract-interval-days" class="mb-1 block text-xs font-semibold text-slate-700">Plan: días entre cobros *</label>
-                        <input id="contract-interval-days" type="number" min="1" max="30" step="1" value="30" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <input id="contract-interval-days" type="number" min="1" max="365" step="1" value="30" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <p class="mt-1 text-[11px] text-slate-500">Usa de 1 a 30 días, o 365 para el plan anual.</p>
                     </div>
                     <div>
                         <label for="contract-plan-amount" class="mb-1 block text-xs font-semibold text-slate-700">Monto por período del plan (USD) *</label>
@@ -3755,10 +3756,11 @@
         }
 
         function addContractDays(date, days) {
-            if (!isValidContractDate(date) || !Number.isInteger(Number(days)) ||
-                Number(days) < 1 || Number(days) > 30) return '';
+            const interval = Number(days);
+            if (!isValidContractDate(date) || !Number.isInteger(interval) ||
+                !((interval >= 1 && interval <= 30) || interval === 365)) return '';
             const value = new Date(`${date}T00:00:00Z`);
-            value.setUTCDate(value.getUTCDate() + Number(days));
+            value.setUTCDate(value.getUTCDate() + interval);
             return value.toISOString().slice(0, 10);
         }
 

@@ -351,6 +351,10 @@ function addContractDays(date, days) {
     return value.toISOString().slice(0, 10);
 }
 
+function isValidContractBillingInterval(days) {
+    return Number.isInteger(days) && ((days >= 1 && days <= 30) || days === 365);
+}
+
 function validateContractPaymentDate(value) {
     if (!isValidContractPaymentDate(value)) {
         const error = new Error('La fecha de pago no es válida.');
@@ -432,8 +436,8 @@ function validateContract(input, client, existing = null) {
     if (endDate && endDate < startDate) fail('La fecha de finalización no puede preceder al inicio.');
     const intervalInput = input.billingIntervalDays ?? existing?.billingIntervalDays ?? 30;
     const billingIntervalDays = Number(intervalInput);
-    if (!Number.isInteger(billingIntervalDays) || billingIntervalDays < 1 || billingIntervalDays > 30) {
-        fail('El intervalo de cobro debe estar entre 1 y 30 días.');
+    if (!isValidContractBillingInterval(billingIntervalDays)) {
+        fail('El intervalo de cobro debe estar entre 1 y 30 días, o ser de 365 días para el plan anual.');
     }
     if (getContractActivationDate(existing || {}) &&
         billingIntervalDays !== Number(existing.billingIntervalDays || 30)) {
@@ -763,8 +767,7 @@ async function deleteContract(id) {
 function getNextChargeDueDate(contract, charges) {
     const activationDate = getContractActivationDate(contract);
     const billingIntervalDays = Number(contract.billingIntervalDays || 30);
-    if (!activationDate || !Number.isInteger(billingIntervalDays) ||
-        billingIntervalDays < 1 || billingIntervalDays > 30) return '';
+    if (!activationDate || !isValidContractBillingInterval(billingIntervalDays)) return '';
     const lastPaidCharge = charges
         .filter(charge => charge.paidAt)
         .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
