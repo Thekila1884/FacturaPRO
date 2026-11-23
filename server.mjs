@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import PDFDocument from 'pdfkit';
 
 const scrypt = promisify(scryptCallback);
 const root = dirname(fileURLToPath(import.meta.url));
@@ -15,11 +16,17 @@ const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sessionDurationMs = 8 * 60 * 60 * 1000;
 const configuredSetupToken = process.env.FACTURAPRO_SETUP_TOKEN;
+const cronSecret = process.env.CRON_SECRET || '';
+const resendApiKey = process.env.RESEND_API_KEY || '';
+const resendFromEmail = process.env.RESEND_FROM_EMAIL || '';
+const resendConfigured = Boolean(resendApiKey && resendFromEmail);
 const setupToken = configuredSetupToken || '';
 let setupTokenExpiresAt = process.env.VERCEL === '1' && configuredSetupToken
     ? Number.POSITIVE_INFINITY
     : 0;
 let setupTokenUsed = false;
+let contractAutomationTimer = null;
+let contractAutomationRun = null;
 const achPaymentMethod = 'Transferencia Bancaria (ACH)';
 const defaultPaymentDetails = Object.fromEntries([
     'Contado',
@@ -466,6 +473,22 @@ function validateContract(input, client, existing = null) {
     if (!existing && defaultChargeAmount === null) {
         fail('Define el monto por período del plan.');
     }
+    const generateInvoices = Object.hasOwn(input, 'generateInvoices')
+        ? input.generateInvoices
+        : existing?.generateInvoices ?? false;
+    const sendInvoiceEmail = Object.hasOwn(input, 'sendInvoiceEmail')
+        ? input.sendInvoiceEmail
+        : existing?.sendInvoiceEmail ?? false;
+    const billItbms = Object.hasOwn(input, 'billItbms')
+        ? input.billItbms
+        : existing?.billItbms ?? true;
+    if (typeof generateInvoices !== 'boolean' || typeof sendInvoiceEmail !== 'boolean' ||
+        typeof billItbms !== 'boolean') {
+        fail('Las opciones de automatización del contrato no son válidas.');
+    }
+    if (sendInvoiceEmail && !generateInvoices) {
+        fail('Activa la generación automática de facturas antes de habilitar el envío por correo.');
+    }
     const notes = input.notes ?? '';
     if (typeof notes !== 'string' || notes.length > 1000) {
         fail('Las notas del contrato exceden el formato permitido.');
@@ -485,6 +508,9 @@ function validateContract(input, client, existing = null) {
         clientAddress: client?.address ?? existing?.clientAddress ?? '',
         description,
         defaultChargeAmount,
+        generateInvoices,
+        sendInvoiceEmail,
+        billItbms,
         monthlyAmount,
         dueDay: existing?.dueDay || 1,
         startDate,
@@ -752,6 +778,348 @@ function getNextChargeDueDate(contract, charges) {
     return nextDueDate;
 }
 
+function formatInvoicePdfDate(value) {
+    return isValidContractPaymentDate(value)
+        ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}`
+        : '—';
+}
+
+function formatInvoicePdfMoney(value) {
+    return `$${(Number(value) || 0).toFixed(2)}`;
+}
+
+function createInvoicePdf(invoice, issuer) {
+    return new Promise((resolve, reject) => {
+        const document = new PDFDocument({ size: 'LETTER', margin: 48 });
+        const chunks = [];
+        document.on('data', chunk => chunks.push(chunk));
+        document.on('error', reject);
+        document.on('end', () => resolve(Buffer.concat(chunks)));
+
+        const margin = 48;
+        const contentWidth = document.page.width - margin * 2;
+        document.fillColor('#0f172a').font('Helvetica-Bold').fontSize(18)
+            .text(issuer.name, { width: contentWidth * 0.7 });
+        document.fillColor('#475569').font('Helvetica').fontSize(9);
+        [
+            issuer.ruc ? `RUC: ${issuer.ruc}${issuer.dv ? ` · DV: ${issuer.dv}` : ''}` : '',
+            issuer.address,
+            issuer.phone ? `Tel: ${issuer.phone}` : '',
+            issuer.email
+        ].filter(Boolean).forEach(line => document.text(line));
+
+        document.moveDown(0.8);
+        document.fillColor('#0f172a').font('Helvetica-Bold').fontSize(16).text('FACTURA COMERCIAL');
+        document.fontSize(10).text(`Factura: ${invoice.number}`);
+        document.font('Helvetica').text(`Fecha de emisión: ${formatInvoicePdfDate(invoice.date)}`);
+        document.text(`Fecha de vencimiento: ${formatInvoicePdfDate(invoice.dueDate)}`);
+        document.text(`Estado: ${invoice.status}`);
+
+        document.moveDown(0.8);
+        document.font('Helvetica-Bold').fontSize(11).text('Facturar a');
+        document.font('Helvetica').fontSize(9)
+            .text(invoice.client.name || 'Cliente')
+            .text(invoice.client.ruc ? `RUC / identificación: ${invoice.client.ruc}` : '')
+            .text(invoice.client.address || '')
+            .text(invoice.client.email || '');
+
+        document.moveDown(1);
+        const tableX = margin;
+        const quantityWidth = 38;
+        const unitWidth = 74;
+        const taxWidth = 42;
+        const totalWidth = 78;
+        const descriptionWidth = contentWidth - quantityWidth - unitWidth - taxWidth - totalWidth;
+        const descriptionX = tableX + quantityWidth;
+        const unitX = descriptionX + descriptionWidth;
+        const taxX = unitX + unitWidth;
+        const totalX = taxX + taxWidth;
+        const drawTableHeader = () => {
+            const y = document.y;
+            document.rect(tableX, y, contentWidth, 22).fill('#e2e8f0');
+            document.fillColor('#0f172a').font('Helvetica-Bold').fontSize(8);
+            document.text('Cant.', tableX + 3, y + 7, { width: quantityWidth - 6 });
+            document.text('Descripción', descriptionX + 3, y + 7, { width: descriptionWidth - 6 });
+            document.text('Precio', unitX, y + 7, { width: unitWidth - 4, align: 'right' });
+            document.text('ITBMS', taxX, y + 7, { width: taxWidth - 4, align: 'center' });
+            document.text('Total', totalX, y + 7, { width: totalWidth - 3, align: 'right' });
+            document.y = y + 22;
+        };
+        drawTableHeader();
+        invoice.items.forEach(item => {
+            const lineSubtotal = item.qty * item.price;
+            const lineTotal = lineSubtotal * (item.itbms ? 1.07 : 1);
+            const descriptionHeight = document.heightOfString(item.description || 'Servicio', {
+                width: descriptionWidth - 8,
+                font: 'Helvetica',
+                fontSize: 8
+            });
+            const rowHeight = Math.max(22, descriptionHeight + 10);
+            if (document.y + rowHeight > document.page.height - margin - 150) {
+                document.addPage();
+                drawTableHeader();
+            }
+            const y = document.y + 5;
+            document.fillColor('#334155').font('Helvetica').fontSize(8);
+            document.text(String(item.qty), tableX + 3, y, { width: quantityWidth - 6 });
+            document.text(item.description || 'Servicio', descriptionX + 3, y, {
+                width: descriptionWidth - 8,
+                height: rowHeight - 5
+            });
+            document.text(formatInvoicePdfMoney(item.price), unitX, y, { width: unitWidth - 4, align: 'right' });
+            document.text(item.itbms ? '7%' : 'Exento', taxX, y, { width: taxWidth - 4, align: 'center' });
+            document.text(formatInvoicePdfMoney(lineTotal), totalX, y, { width: totalWidth - 3, align: 'right' });
+            document.moveTo(tableX, document.y + rowHeight).lineTo(tableX + contentWidth, document.y + rowHeight)
+                .strokeColor('#e2e8f0').stroke();
+            document.y += rowHeight;
+        });
+
+        const totals = [
+            ['Subtotal', invoice.totals.subtotal],
+            ...(invoice.totals.discount > 0 ? [['Descuento', -invoice.totals.discount]] : []),
+            ['ITBMS', invoice.totals.itbms]
+        ];
+        const totalsHeight = (totals.length + 1) * 18 + 14;
+        if (document.y + totalsHeight > document.page.height - margin) document.addPage();
+        document.moveDown(0.6);
+        const totalsLabelX = margin + contentWidth - 190;
+        totals.forEach(([label, amount]) => {
+            const y = document.y;
+            document.fillColor('#475569').font('Helvetica').fontSize(9)
+                .text(label, totalsLabelX, y, { width: 110 });
+            document.text(formatInvoicePdfMoney(amount), totalsLabelX + 110, y, { width: 80, align: 'right' });
+            document.y = y + 18;
+        });
+        const totalY = document.y + 3;
+        document.roundedRect(totalsLabelX - 8, totalY, 198, 28, 4).fill('#0f172a');
+        document.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11)
+            .text('TOTAL USD', totalsLabelX, totalY + 8, { width: 100 });
+        document.text(formatInvoicePdfMoney(invoice.totals.grandTotal), totalsLabelX + 100, totalY + 8, {
+            width: 82,
+            align: 'right'
+        });
+        document.y = totalY + 36;
+        if (invoice.notes) {
+            if (document.y + 42 > document.page.height - margin) document.addPage();
+            document.fillColor('#475569').font('Helvetica-Bold').fontSize(9).text('Notas');
+            document.font('Helvetica').fontSize(8).text(invoice.notes, { width: contentWidth });
+        }
+        document.end();
+    });
+}
+
+function escapeEmailHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
+}
+
+async function sendInvoiceEmail(invoice, issuer) {
+    if (!resendConfigured) {
+        const error = new Error('Configura Resend en el servidor antes de enviar correos.');
+        error.status = 503;
+        throw error;
+    }
+    const recipient = invoice.client.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+        throw new Error('El cliente no tiene un correo electrónico válido.');
+    }
+    const pdf = await createInvoicePdf(invoice, issuer);
+    const safeNumber = invoice.number.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': createHash('sha256').update(invoice.id).digest('hex')
+        },
+        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({
+            from: resendFromEmail,
+            to: [recipient],
+            subject: `Factura ${invoice.number} · ${issuer.name}`,
+            html: `<p>Hola ${escapeEmailHtml(invoice.client.name)},</p>
+                <p>Adjuntamos la factura <strong>${escapeEmailHtml(invoice.number)}</strong> por
+                <strong>${formatInvoicePdfMoney(invoice.totals.grandTotal)}</strong> USD.</p>
+                <p>Fecha de vencimiento: ${formatInvoicePdfDate(invoice.dueDate)}.</p>
+                <p>Saludos,<br>${escapeEmailHtml(issuer.name)}</p>`,
+            attachments: [{
+                filename: `Factura-${safeNumber}.pdf`,
+                content: pdf.toString('base64')
+            }]
+        })
+    });
+    if (!response.ok) {
+        const error = new Error(`Resend rechazó el correo (HTTP ${response.status}).`);
+        error.status = 502;
+        throw error;
+    }
+    return response.json();
+}
+
+async function sendInvoiceWithStatus(invoice, issuer) {
+    const lastAttemptAt = new Date().toISOString();
+    const pendingInvoice = {
+        ...invoice,
+        automaticContract: {
+            ...invoice.automaticContract,
+            email: { ...invoice.automaticContract.email, status: 'pending', lastAttemptAt }
+        },
+        updatedAt: lastAttemptAt
+    };
+    await saveInvoice(pendingInvoice);
+    try {
+        const response = await sendInvoiceEmail(pendingInvoice, issuer);
+        const sentAt = new Date().toISOString();
+        const sentInvoice = {
+            ...pendingInvoice,
+            automaticContract: {
+                ...pendingInvoice.automaticContract,
+                email: {
+                    status: 'sent',
+                    lastAttemptAt,
+                    sentAt,
+                    providerId: typeof response?.id === 'string' ? response.id.slice(0, 200) : ''
+                }
+            },
+            updatedAt: sentAt
+        };
+        await saveInvoice(sentInvoice);
+        return sentInvoice;
+    } catch (error) {
+        const failedAt = new Date().toISOString();
+        const failedInvoice = {
+            ...pendingInvoice,
+            automaticContract: {
+                ...pendingInvoice.automaticContract,
+                email: {
+                    status: 'failed',
+                    lastAttemptAt,
+                    failedAt,
+                    error: error.message.slice(0, 300)
+                }
+            },
+            updatedAt: failedAt
+        };
+        await saveInvoice(failedInvoice);
+        throw error;
+    }
+}
+
+function getAutomaticInvoiceIdentity(contractId, dueDate) {
+    const digest = createHash('sha256').update(`${contractId}:${dueDate}`).digest('hex');
+    return {
+        id: `contract_invoice_${digest.slice(0, 40)}`,
+        number: `FAC-REC-${dueDate.replaceAll('-', '')}-${digest.slice(0, 8).toUpperCase()}`
+    };
+}
+
+async function executeContractInvoiceAutomation(today) {
+    const [contracts, invoices, clients, issuer] = await Promise.all([
+        listContracts(),
+        listInvoices(),
+        getClients(),
+        getIssuer()
+    ]);
+    const invoiceById = new Map(invoices.map(invoice => [invoice.id, invoice]));
+    const result = { created: 0, emailed: 0, failed: [] };
+    for (const contract of contracts) {
+        if (!contract.generateInvoices || !contract.collectionStartedAt) continue;
+        const dueCharges = new Map((contract.charges || [])
+            .filter(charge => charge.dueDate <= today)
+            .map(charge => [charge.dueDate, charge]));
+        if (contract.nextChargeDate && contract.nextChargeDate <= today &&
+            !dueCharges.has(contract.nextChargeDate)) {
+            dueCharges.set(contract.nextChargeDate, {
+                dueDate: contract.nextChargeDate,
+                amount: contract.defaultChargeAmount,
+                paidAt: ''
+            });
+        }
+        for (const charge of dueCharges.values()) {
+            try {
+                const amount = Number(charge.amount ?? contract.defaultChargeAmount);
+                if (!Number.isFinite(amount) || amount <= 0) {
+                    throw new Error('El período no tiene un monto válido configurado.');
+                }
+                const identity = getAutomaticInvoiceIdentity(contract.id, charge.dueDate);
+                let invoice = invoiceById.get(identity.id);
+                if (!invoice) {
+                    const catalogClient = clients.find(client => client.id === contract.clientId);
+                    invoice = {
+                        ...validateInvoice({
+                            id: identity.id,
+                            number: identity.number,
+                            status: charge.paidAt ? 'Pagada' : 'Pendiente',
+                            date: today,
+                            dueDate: charge.dueDate,
+                            paymentTerms: `Contrato recurrente · cada ${contract.billingIntervalDays} días`,
+                            client: {
+                                name: catalogClient?.name || contract.clientName,
+                                ruc: catalogClient?.ruc || contract.clientRuc || '',
+                                dv: catalogClient?.dv || contract.clientDv || '',
+                                phone: catalogClient?.phone || contract.clientPhone || '',
+                                email: catalogClient ? catalogClient.email : contract.clientEmail || '',
+                                address: catalogClient?.address || contract.clientAddress || ''
+                            },
+                            items: [{
+                                id: `contract-item-${contract.id}`.slice(0, 100),
+                                qty: 1,
+                                description: contract.description,
+                                price: amount,
+                                itbms: contract.billItbms !== false
+                            }],
+                            discountType: 'none',
+                            discountValue: 0,
+                            notes: contract.notes || ''
+                        }),
+                        automaticContract: {
+                            contractId: contract.id,
+                            dueDate: charge.dueDate,
+                            email: { status: contract.sendInvoiceEmail ? 'pending' : 'disabled' }
+                        }
+                    };
+                    await saveInvoice(invoice);
+                    invoiceById.set(invoice.id, invoice);
+                    result.created++;
+                } else if (invoice.automaticContract?.contractId !== contract.id ||
+                    invoice.automaticContract?.dueDate !== charge.dueDate) {
+                    throw new Error('El identificador de factura automática está asociado a otro origen.');
+                }
+
+                if (!contract.sendInvoiceEmail) continue;
+                if (invoice.automaticContract.email.status === 'sent') continue;
+                const sentInvoice = await sendInvoiceWithStatus(invoice, issuer);
+                invoiceById.set(invoice.id, sentInvoice);
+                result.emailed++;
+            } catch (error) {
+                const failure = {
+                    contractId: contract.id,
+                    dueDate: charge.dueDate,
+                    message: error.message.slice(0, 300)
+                };
+                result.failed.push(failure);
+                console.error('Automatic contract invoice failed:', failure);
+            }
+        }
+    }
+    return result;
+}
+
+async function processContractInvoiceAutomation(today = getCurrentPanamaDate()) {
+    if (contractAutomationRun) return contractAutomationRun;
+    contractAutomationRun = executeContractInvoiceAutomation(today);
+    try {
+        return await contractAutomationRun;
+    } finally {
+        contractAutomationRun = null;
+    }
+}
+
 async function getContractDetails(contract) {
     const [payments, charges] = await Promise.all([
         getContractPayments(contract.id),
@@ -764,6 +1132,9 @@ async function getContractDetails(contract) {
         collectionStartedAt: getContractActivationDate(contract),
         billingIntervalDays: contract.billingIntervalDays || 30,
         defaultChargeAmount: contract.defaultChargeAmount ?? contract.monthlyAmount ?? null,
+        generateInvoices: contract.generateInvoices === true,
+        sendInvoiceEmail: contract.sendInvoiceEmail === true,
+        billItbms: contract.billItbms !== false,
         payments: payments.map(({ month, paidAt }) => ({ month, paidAt })),
         charges: charges.map(({ dueDate, amount, paidAt }) => ({ dueDate, amount, paidAt })),
         nextChargeDate: getNextChargeDueDate(contract, charges)
@@ -803,6 +1174,9 @@ async function listContracts() {
             collectionStartedAt: getContractActivationDate(contract),
             billingIntervalDays: contract.billingIntervalDays || 30,
             defaultChargeAmount: contract.defaultChargeAmount ?? contract.monthlyAmount ?? null,
+            generateInvoices: contract.generateInvoices === true,
+            sendInvoiceEmail: contract.sendInvoiceEmail === true,
+            billItbms: contract.billItbms !== false,
             payments: (paymentsByContract.get(id) || []).sort((a, b) => a.month.localeCompare(b.month)),
             charges: (chargesByContract.get(id) || []).sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
             nextChargeDate: getNextChargeDueDate(contract, chargesByContract.get(id) || [])
@@ -997,13 +1371,26 @@ async function handleApi(request, response, url) {
             'Set-Cookie': sessionCookie('', 0, isSecureRequest(request))
         });
     }
+    if (method === 'GET' && path === '/api/cron/contracts') {
+        const authorization = request.headers.authorization || '';
+        const providedSecret = authorization.startsWith('Bearer ')
+            ? Buffer.from(authorization.slice('Bearer '.length))
+            : Buffer.alloc(0);
+        const expectedSecret = Buffer.from(cronSecret);
+        const secretValid = cronSecret.length >= 32 &&
+            providedSecret.length === expectedSecret.length &&
+            timingSafeEqual(providedSecret, expectedSecret);
+        if (!secretValid) return jsonResponse(response, 401, { error: 'Autorización de tarea programada inválida.' });
+        const result = await processContractInvoiceAutomation();
+        return jsonResponse(response, result.failed.length ? 500 : 200, result);
+    }
 
     const session = await getSession(request);
     if (!session) return jsonResponse(response, 401, { error: 'Inicia sesión para continuar.' });
 
     if (method === 'GET' && path === '/api/bootstrap') {
         const [issuer, invoices] = await Promise.all([getIssuer(), listInvoices()]);
-        return jsonResponse(response, 200, { issuer, invoices });
+        return jsonResponse(response, 200, { issuer, invoices, resendConfigured });
     }
     if (method === 'GET' && path === '/api/clients') {
         return jsonResponse(response, 200, { clients: await getClients() });
@@ -1168,6 +1555,20 @@ async function handleApi(request, response, url) {
         if (!await deleteContract(id)) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
         return jsonResponse(response, 200, { deleted: true });
     }
+    const invoiceEmailRetryRoute = path.match(/^\/api\/invoices\/([^/]+)\/email\/retry$/);
+    if (method === 'POST' && invoiceEmailRetryRoute) {
+        const id = decodeURIComponent(invoiceEmailRetryRoute[1]);
+        const invoice = await getInvoice(id);
+        if (!invoice) return jsonResponse(response, 404, { error: 'No se encontró la factura.' });
+        if (!invoice.automaticContract?.email) {
+            return jsonResponse(response, 409, { error: 'Esta factura no tiene un envío automático pendiente.' });
+        }
+        if (invoice.automaticContract.email.status === 'sent') {
+            return jsonResponse(response, 409, { error: 'La factura ya fue enviada por correo.' });
+        }
+        const updatedInvoice = await sendInvoiceWithStatus(invoice, await getIssuer());
+        return jsonResponse(response, 200, { invoice: updatedInvoice });
+    }
     if (method === 'PUT' && path === '/api/settings/issuer') {
         const issuer = validateIssuer(await readJson(request));
         await saveIssuer(issuer);
@@ -1206,7 +1607,10 @@ async function handleApi(request, response, url) {
         }
         if (method === 'PUT' && !path.endsWith('/status')) {
             const input = await readJson(request);
-            const invoice = validateInvoice({ ...input, id });
+            const validatedInvoice = validateInvoice({ ...input, id });
+            const invoice = existing.automaticContract
+                ? { ...validatedInvoice, automaticContract: existing.automaticContract }
+                : validatedInvoice;
             await saveInvoice(invoice);
             return jsonResponse(response, 200, { invoice });
         }
@@ -1265,6 +1669,29 @@ export async function handleRequest(request, response) {
     }
 }
 
+function millisecondsUntilPanamaMidnight() {
+    const tomorrow = addContractDays(getCurrentPanamaDate(), 1);
+    return Math.max(1000, Date.parse(`${tomorrow}T05:00:00.000Z`) - Date.now());
+}
+
+function scheduleLocalContractAutomation() {
+    if (process.env.VERCEL === '1') return;
+    contractAutomationTimer = setTimeout(async () => {
+        try {
+            const result = await processContractInvoiceAutomation();
+            if (result.failed.length) {
+                console.error('Scheduled contract invoice processing completed with failures:', result.failed);
+            } else if (result.created || result.emailed) {
+                console.log(`Scheduled contract invoices: ${result.created} created, ${result.emailed} emailed.`);
+            }
+        } catch (error) {
+            console.error('Scheduled contract invoice processing failed:', error);
+        } finally {
+            scheduleLocalContractAutomation();
+        }
+    }, millisecondsUntilPanamaMidnight());
+}
+
 let server;
 async function startServer() {
     await supabaseRequest('facturapro_admin', 'select=id&limit=1');
@@ -1284,10 +1711,21 @@ async function startServer() {
     server.listen(port, host, () => {
         console.log(`FacturaPro listo en http://${host}:${port}`);
         console.log('Base de datos: Supabase Postgres');
+        if (process.env.VERCEL !== '1') {
+            processContractInvoiceAutomation().then(result => {
+                if (result.failed.length) {
+                    console.error('Startup contract invoice processing completed with failures:', result.failed);
+                } else if (result.created || result.emailed) {
+                    console.log(`Startup contract invoices: ${result.created} created, ${result.emailed} emailed.`);
+                }
+            }).catch(error => console.error('Startup contract invoice processing failed:', error));
+            scheduleLocalContractAutomation();
+        }
     });
 }
 
 function closeServer() {
+    if (contractAutomationTimer) clearTimeout(contractAutomationTimer);
     if (!server) return process.exit(0);
     server.close(() => {
         process.exit(0);

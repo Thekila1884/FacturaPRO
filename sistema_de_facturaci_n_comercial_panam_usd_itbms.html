@@ -934,7 +934,7 @@
             <div class="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                 <div>
                     <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Contratos y cobros recurrentes</h1>
-                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Primero registra e imprime el contrato con el membrete del emisor. Después, «Empezar a cobrar» activa períodos recurrentes de 1 a 30 días; el monto se define en cada período y no se crean facturas.</p>
+                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Primero registra e imprime el contrato con el membrete del emisor. Después, «Empezar a cobrar» activa períodos recurrentes de 1 a 30 días. En cada contrato puedes elegir si se crean facturas automáticamente y si se envían por correo.</p>
                 </div>
                 <div class="flex flex-wrap items-end gap-2">
                     <div>
@@ -1015,6 +1015,30 @@
                         <label for="contract-end-date" class="mb-1 block text-xs font-semibold text-slate-700">Fecha de finalización (opcional)</label>
                         <input id="contract-end-date" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
+                    <div class="sm:col-span-2 lg:col-span-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-3">
+                            <input id="contract-generate-invoice" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600" onchange="updateContractAutomationControls()">
+                            <span>
+                                <span class="block text-sm font-semibold text-slate-800">Generar facturas automáticamente</span>
+                                <span class="mt-1 block text-xs leading-relaxed text-slate-500">Se crea una factura pendiente en la fecha de vencimiento, con el monto del período y el ITBMS elegido.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-3">
+                            <input id="contract-email-invoice" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600" onchange="updateContractAutomationControls()">
+                            <span>
+                                <span class="block text-sm font-semibold text-slate-800">Enviar factura por correo</span>
+                                <span class="mt-1 block text-xs leading-relaxed text-slate-500">Envía el PDF al correo registrado del cliente, inmediatamente después de generar la factura.</span>
+                            </span>
+                        </label>
+                        <p id="contract-email-status" class="md:col-span-2 text-xs text-slate-500"></p>
+                    </div>
+                    <label class="sm:col-span-2 lg:col-span-3 flex items-start gap-3 rounded-xl border border-slate-200 p-3">
+                        <input id="contract-itbms" type="checkbox" checked class="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600">
+                        <span>
+                            <span class="block text-sm font-semibold text-slate-800">Aplicar ITBMS del 7%</span>
+                            <span class="mt-1 block text-xs leading-relaxed text-slate-500">El monto del plan es el subtotal antes de impuestos. Desmarca esta opción si este servicio es exento.</span>
+                        </span>
+                    </label>
                     <div class="sm:col-span-2 lg:col-span-3">
                         <p class="mb-3 text-xs text-slate-500">El monto del plan se aplica automáticamente a los nuevos períodos. Puedes cambiarlo después; los cobros que ya tengan un monto guardado no se modifican.</p>
                         <label for="contract-notes" class="mb-1 block text-xs font-semibold text-slate-700">Notas</label>
@@ -1622,6 +1646,7 @@
         let savedClients = [];
         let savedContracts = [];
         let currentEditingContractId = null;
+        let resendConfigured = false;
         let authMode = 'login';
         let loginScreenRequested = false;
         let issuerSaveTimer = null;
@@ -1787,6 +1812,7 @@
             savedInvoices = invoices;
             savedClients = clientData.clients;
             savedContracts = contractData.contracts;
+            resendConfigured = Boolean(data.resendConfigured);
             loadIssuerData(issuer);
             renderClientSelect();
             renderClientCatalog();
@@ -3483,11 +3509,31 @@
                 let badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100';
                 if (inv.status === 'Pagada') badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
                 if (inv.status === 'Anulada') badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100';
+                const emailDelivery = inv.automaticContract?.email;
+                const emailStatusLabel = emailDelivery?.status === 'sent'
+                    ? 'Correo enviado'
+                    : emailDelivery?.status === 'failed'
+                        ? 'Error al enviar correo'
+                        : emailDelivery?.status === 'pending'
+                            ? 'Correo pendiente'
+                            : '';
+                const emailStatusClass = emailDelivery?.status === 'failed'
+                    ? 'text-rose-600'
+                    : emailDelivery?.status === 'sent'
+                        ? 'text-emerald-700'
+                        : 'text-amber-700';
+                const retryEmailButton = emailDelivery?.status === 'failed'
+                    ? `<button onclick="retryInvoiceEmail('${escapeHtml(inv.id)}')" title="${escapeHtml(emailDelivery.error || 'Reintentar envío')}"
+                        class="rounded-lg border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-700 hover:bg-rose-50">Reintentar correo</button>`
+                    : '';
 
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/90 transition-colors';
                 tr.innerHTML = `
-                    <td class="py-3.5 px-4 font-bold text-slate-900">${escapeHtml(inv.number)}</td>
+                    <td class="py-3.5 px-4 font-bold text-slate-900">
+                        <div>${escapeHtml(inv.number)}</div>
+                        ${emailStatusLabel ? `<div class="mt-1 text-[10px] font-semibold ${emailStatusClass}">${emailStatusLabel}</div>` : ''}
+                    </td>
                     <td class="py-3.5 px-4 text-xs text-slate-600">
                         <div class="font-medium text-slate-800">${formatDateReadable(inv.date)}</div>
                         <div class="text-slate-400">Vence: ${formatDateReadable(inv.dueDate)}</div>
@@ -3523,6 +3569,7 @@
                                 class="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
                                 <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                             </button>
+                            ${retryEmailButton}
                             <button onclick="requestDeleteInvoice('${inv.id}')" title="Eliminar"
                                 class="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -3534,6 +3581,21 @@
             });
 
             lucide.createIcons();
+        }
+
+        async function retryInvoiceEmail(id) {
+            try {
+                const result = await apiRequest(
+                    `/api/invoices/${encodeURIComponent(id)}/email/retry`,
+                    { method: 'POST', body: '{}' }
+                );
+                const index = savedInvoices.findIndex(invoice => invoice.id === id);
+                if (index >= 0) savedInvoices[index] = result.invoice;
+                renderHistoryTable();
+                showToast('Factura enviada por correo correctamente', 'success');
+            } catch (error) {
+                showToast(`No se pudo enviar la factura: ${error.message}`, 'error');
+            }
         }
 
         function isValidContractMonth(month) {
@@ -3696,7 +3758,28 @@
             document.getElementById('contract-plan-amount').value = '';
             document.getElementById('contract-start-date').value = getTodayISO();
             document.getElementById('contract-end-date').value = '';
+            document.getElementById('contract-generate-invoice').checked = false;
+            document.getElementById('contract-email-invoice').checked = false;
+            document.getElementById('contract-itbms').checked = true;
+            updateContractAutomationControls();
             renderContractClientSelect('');
+        }
+
+        function updateContractAutomationControls() {
+            const generateInvoice = document.getElementById('contract-generate-invoice').checked;
+            const emailInvoice = document.getElementById('contract-email-invoice');
+            if (!generateInvoice) emailInvoice.checked = false;
+            emailInvoice.disabled = !generateInvoice || (!resendConfigured && !emailInvoice.checked);
+            const status = document.getElementById('contract-email-status');
+            if (!generateInvoice) {
+                status.textContent = 'La factura se creará solo si activas la opción anterior.';
+            } else if (!resendConfigured) {
+                status.textContent = 'Para enviar correos, configura RESEND_API_KEY y RESEND_FROM_EMAIL en el servidor. La factura podrá generarse sin correo.';
+            } else if (emailInvoice.checked) {
+                status.textContent = 'La factura PDF se enviará al correo del cliente inmediatamente después de generarse.';
+            } else {
+                status.textContent = 'La factura se guardará en el historial sin enviarse por correo.';
+            }
         }
 
         function renderContracts() {
@@ -3911,7 +3994,7 @@
                 ruc: catalogClient?.ruc || contract.clientRuc || '',
                 dv: catalogClient?.dv || contract.clientDv || '',
                 phone: catalogClient?.phone || contract.clientPhone || '',
-                email: catalogClient?.email || contract.clientEmail || '',
+                email: catalogClient ? catalogClient.email : contract.clientEmail || '',
                 address: catalogClient?.address || contract.clientAddress || ''
             };
             const issuer = {
@@ -4070,6 +4153,10 @@
                 contract.defaultChargeAmount ?? contract.monthlyAmount ?? '';
             document.getElementById('contract-start-date').value = contract.startDate || `${contract.startMonth}-01`;
             document.getElementById('contract-end-date').value = contract.endDate || '';
+            document.getElementById('contract-generate-invoice').checked = contract.generateInvoices === true;
+            document.getElementById('contract-email-invoice').checked = contract.sendInvoiceEmail === true;
+            document.getElementById('contract-itbms').checked = contract.billItbms !== false;
+            updateContractAutomationControls();
             document.getElementById('contract-notes').value = contract.notes || '';
             renderContractClientSelect(contract.clientId);
             document.getElementById('contract-form-title').textContent = 'Editar contrato';
@@ -4088,6 +4175,9 @@
                 description: document.getElementById('contract-description').value.trim(),
                 billingIntervalDays: Number(document.getElementById('contract-interval-days').value),
                 defaultChargeAmount: Number(document.getElementById('contract-plan-amount').value),
+                generateInvoices: document.getElementById('contract-generate-invoice').checked,
+                sendInvoiceEmail: document.getElementById('contract-email-invoice').checked,
+                billItbms: document.getElementById('contract-itbms').checked,
                 startDate: document.getElementById('contract-start-date').value,
                 endDate: document.getElementById('contract-end-date').value,
                 notes: document.getElementById('contract-notes').value.trim()

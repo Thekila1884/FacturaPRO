@@ -9,5 +9,11 @@
       "source": "/",
       "destination": "/sistema_de_facturaci_n_comercial_panam_usd_itbms.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/contracts",
+      "schedule": "0 5 * * *"
+    }
   ]
 }

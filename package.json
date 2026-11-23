@@ -12,6 +12,9 @@
   "engines": {
     "node": "22.x"
   },
+  "dependencies": {
+    "pdfkit": "^0.21.0"
+  },
   "devDependencies": {
     "tailwindcss": "^3.4.17"
   }

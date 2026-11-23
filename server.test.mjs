@@ -174,6 +174,9 @@ before(async () => {
     process.env.SUPABASE_URL = `http://127.0.0.1:${supabasePort}`;
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
     process.env.FACTURAPRO_SETUP_TOKEN = 'test-initial-setup-token-000000000001';
+    process.env.CRON_SECRET = 'test-contract-cron-secret-at-least-32-characters';
+    process.env.RESEND_API_KEY = 'test-resend-api-key';
+    process.env.RESEND_FROM_EMAIL = 'FacturaPro <facturacion@example.test>';
     process.env.VERCEL = '1';
     ({ default: vercelHandler } = await import('./api/index.mjs'));
     ({ handleRequest: applicationHandler } = await import('./server.mjs'));
@@ -471,6 +474,118 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     assert.equal(earlyPaidContract.charges[0].amount, 50);
     await api(earlyPaymentPath, { method: 'DELETE' });
 
+    await api('/api/cron/contracts', { expected: 401 });
+    const automatedContract = (await api('/api/contracts', {
+        method: 'PUT',
+        body: {
+            ...newContract,
+            clientId: 'client-2',
+            description: 'Servicio recurrente',
+            defaultChargeAmount: 75,
+            generateInvoices: true,
+            sendInvoiceEmail: true,
+            billItbms: false
+        },
+        expected: 201
+    })).contract;
+    assert.equal(automatedContract.generateInvoices, true);
+    assert.equal(automatedContract.sendInvoiceEmail, true);
+    assert.equal(automatedContract.billItbms, false);
+    const automatedContractPath = `/api/contracts/${automatedContract.id}`;
+    await api(`${automatedContractPath}/collection/start`, { method: 'POST' });
+    const storedAutomatedContract = tables.facturapro_settings.find(row =>
+        row.key === `contract:${automatedContract.id}`
+    );
+    storedAutomatedContract.value.collectionStartedAt = addDays(today, -6);
+
+    const originalFetch = globalThis.fetch;
+    const resendRequests = [];
+    globalThis.fetch = async (input, options) => {
+        if (String(input) === 'https://api.resend.com/emails') {
+            resendRequests.push(JSON.parse(options.body));
+            if (resendRequests.length === 1) {
+                return new Response(JSON.stringify({ error: 'temporary failure' }), {
+                    status: 503,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            return new Response(JSON.stringify({ id: `test-email-${resendRequests.length}` }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        return originalFetch(input, options);
+    };
+    try {
+        const automation = await api('/api/cron/contracts', {
+            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+            expected: 500
+        });
+        assert.equal(automation.failed.length, 1);
+        assert.equal(automation.created, 1);
+        assert.equal(automation.emailed, 0);
+        assert.equal(resendRequests.length, 1);
+        assert.equal(resendRequests[0].to[0], secondClient.email);
+        const attachment = Buffer.from(resendRequests[0].attachments[0].content, 'base64');
+        assert.equal(attachment.subarray(0, 5).toString(), '%PDF-');
+        const generatedInvoice = (await api('/api/invoices')).invoices
+            .find(item => item.automaticContract?.contractId === automatedContract.id);
+        assert.ok(generatedInvoice);
+        assert.equal(generatedInvoice.status, 'Pendiente');
+        assert.equal(generatedInvoice.items[0].itbms, false);
+        assert.equal(generatedInvoice.totals.grandTotal, 75);
+        assert.equal(generatedInvoice.automaticContract.email.status, 'failed');
+        const retryResult = await api(`/api/invoices/${generatedInvoice.id}/email/retry`, {
+            method: 'POST',
+            body: {}
+        });
+        assert.equal(retryResult.invoice.automaticContract.email.status, 'sent');
+        const secondAutomation = await api('/api/cron/contracts', {
+            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` }
+        });
+        assert.equal(secondAutomation.created, 0);
+        assert.equal(secondAutomation.emailed, 0);
+        assert.equal(resendRequests.length, 2);
+
+        const staleEmailContract = (await api('/api/contracts', {
+            method: 'PUT',
+            body: {
+                ...newContract,
+                clientId: 'client-2',
+                description: 'Servicio sin correo vigente',
+                generateInvoices: true,
+                sendInvoiceEmail: true
+            },
+            expected: 201
+        })).contract;
+        const staleEmailContractPath = `/api/contracts/${staleEmailContract.id}`;
+        await api(`${staleEmailContractPath}/collection/start`, { method: 'POST' });
+        tables.facturapro_settings.find(row =>
+            row.key === `contract:${staleEmailContract.id}`
+        ).value.collectionStartedAt = addDays(today, -6);
+        await api('/api/clients', {
+            method: 'PUT',
+            body: { client: { ...secondClient, email: '' } }
+        });
+        const missingEmailAutomation = await api('/api/cron/contracts', {
+            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+            expected: 500
+        });
+        assert.equal(missingEmailAutomation.failed.length, 1);
+        assert.equal(missingEmailAutomation.created, 1);
+        assert.equal(resendRequests.length, 2);
+        const invoiceWithoutCurrentEmail = (await api('/api/invoices')).invoices
+            .find(item => item.automaticContract?.contractId === staleEmailContract.id);
+        assert.ok(invoiceWithoutCurrentEmail);
+        assert.equal(invoiceWithoutCurrentEmail.client.email, '');
+        await api(`/api/invoices/${invoiceWithoutCurrentEmail.id}`, { method: 'DELETE' });
+        await api(staleEmailContractPath, { method: 'DELETE' });
+        await api('/api/clients', { method: 'PUT', body: { client: secondClient } });
+        await api(`/api/invoices/${generatedInvoice.id}`, { method: 'DELETE' });
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+
     await api('/api/clients/client-1', { method: 'DELETE' });
     assert.deepEqual((await api('/api/clients')).clients, [secondClient]);
     await api('/api/clients/client-1', { method: 'DELETE', expected: 404 });
@@ -498,7 +613,9 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         body: { paymentDetails: { 'Yappy Comercial': 'x'.repeat(501) } },
         expected: 400
     });
-    const bootstrappedIssuer = (await api('/api/bootstrap')).issuer;
+    const bootstrap = await api('/api/bootstrap');
+    const bootstrappedIssuer = bootstrap.issuer;
+    assert.equal(bootstrap.resendConfigured, true);
     assert.equal(bootstrappedIssuer.achDetails, 'Cuenta ACH actualizada');
     assert.equal(bootstrappedIssuer.paymentDetails['Yappy Comercial'], 'Yappy de prueba');
 
