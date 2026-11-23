@@ -7,14 +7,15 @@ const html = readFileSync(new URL('./sistema_de_facturaci_n_comercial_panam_usd_
 const inlineScript = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0]?.[1];
 assert.ok(inlineScript, 'The app must contain its inline script');
 
-function createAppContext(elements = {}) {
+function createAppContext(elements = {}, documentOverrides = {}) {
     const context = vm.createContext({
         document: {
             addEventListener() {},
             getElementById(id) {
                 if (!elements[id]) throw new Error(`Unexpected element lookup: ${id}`);
                 return elements[id];
-            }
+            },
+            ...documentOverrides
         },
         window: {}
     });
@@ -71,4 +72,68 @@ test('receivables snapshot preserves aging buckets for pending invoices', () => 
     assert.equal(snapshot.rows.length, 5);
     assert.equal(snapshot.rows[0].daysLate, 71);
     assert.equal(snapshot.rows.at(-1).daysLate, null);
+});
+
+test('contract due dates clamp to the final day and payment snapshots distinguish overdue and paid', () => {
+    const context = createAppContext();
+    const snapshot = JSON.parse(vm.runInContext(`JSON.stringify({
+        februaryLeapYear: getContractDueDate('2024-02', 31),
+        februaryNonLeapYear: getContractDueDate('2025-02', 31),
+        invalidMonth: getContractDueDate('2025-13', 31),
+        overdue: getContractMonthSnapshot({
+            dueDay: 31,
+            payments: []
+        }, '2025-02', '2025-03-01'),
+        paid: getContractMonthSnapshot({
+            dueDay: 31,
+            payments: [{ month: '2025-02', paidAt: '2025-02-28' }]
+        }, '2025-02', '2025-03-01')
+    })`, context));
+
+    assert.equal(snapshot.februaryLeapYear, '2024-02-29');
+    assert.equal(snapshot.februaryNonLeapYear, '2025-02-28');
+    assert.equal(snapshot.invalidMonth, '');
+    assert.equal(snapshot.overdue.dueDate, '2025-02-28');
+    assert.equal(snapshot.overdue.status, 'Vencido');
+    assert.equal(snapshot.paid.status, 'Pagado');
+});
+
+test('monthly contract view renders a due date and payment controls', () => {
+    const makeElement = () => ({
+        children: [],
+        classList: { toggle() {} },
+        replaceChildren(...children) { this.children = children; },
+        append(...children) { this.children.push(...children); },
+        appendChild(child) { this.children.push(child); },
+        addEventListener() {},
+        setAttribute() {}
+    });
+    const elements = {
+        'contract-payments-tbody': makeElement(),
+        'contract-month-count': makeElement(),
+        'contract-month-expected': makeElement(),
+        'contract-month-paid': makeElement(),
+        'contract-month-overdue': makeElement(),
+        'contract-payments-empty': makeElement()
+    };
+    const context = createAppContext(elements, { createElement: makeElement });
+    vm.runInContext(`savedContracts = [{
+        id: 'contract-1',
+        clientId: 'client-1',
+        clientName: 'Cliente',
+        description: 'Soporte',
+        monthlyAmount: 125,
+        dueDay: 31,
+        startMonth: '2025-01',
+        endMonth: '',
+        payments: []
+    }]; renderContractPayments('2025-02')`, context);
+
+    assert.equal(elements['contract-month-count'].textContent, '1');
+    assert.equal(elements['contract-month-expected'].textContent, '$125.00');
+    const row = elements['contract-payments-tbody'].children[0];
+    assert.equal(row.children[1].textContent, '28/02/2025');
+    const actionGroup = row.children[4].children[0];
+    assert.match(actionGroup.children[0].value, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(actionGroup.children[1].textContent, 'Registrar pago');
 });

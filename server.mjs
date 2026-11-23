@@ -303,6 +303,102 @@ function validateClients(input) {
     });
 }
 
+function validateContractId(id) {
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(id)) {
+        const error = new Error('El identificador del contrato no es válido.');
+        error.status = 400;
+        throw error;
+    }
+    return id;
+}
+
+function isValidContractMonth(value) {
+    if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false;
+    const year = Number(value.slice(0, 4));
+    return year >= 1900 && year <= 9999;
+}
+
+function validateContractMonth(value, label) {
+    if (!isValidContractMonth(value)) {
+        const error = new Error(`El mes de ${label} no es válido.`);
+        error.status = 400;
+        throw error;
+    }
+    return value;
+}
+
+function validateContractPaymentDate(value) {
+    if (!isValidContractPaymentDate(value)) {
+        const error = new Error('La fecha de pago no es válida.');
+        error.status = 400;
+        throw error;
+    }
+    return value;
+}
+
+function isValidContractPaymentDate(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const timestamp = Date.parse(`${value}T00:00:00Z`);
+    return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
+}
+
+function validateContract(input, client, existing = null) {
+    const fail = message => {
+        const error = new Error(message);
+        error.status = 400;
+        throw error;
+    };
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+        fail('Los datos del contrato no son válidos.');
+    }
+    const clientId = validateClientId(input.clientId);
+    if (!client && existing?.clientId !== clientId) {
+        fail('Selecciona un cliente guardado en el catálogo.');
+    }
+    const description = typeof input.description === 'string' ? input.description.trim() : '';
+    if (!description || description.length > 200) {
+        fail('El concepto del contrato es obligatorio y no debe exceder 200 caracteres.');
+    }
+    const monthlyAmount = Number(input.monthlyAmount);
+    const roundedAmount = Math.round(monthlyAmount * 100) / 100;
+    if (!Number.isFinite(monthlyAmount) || monthlyAmount <= 0 ||
+        monthlyAmount > 1_000_000_000 || Math.abs(monthlyAmount - roundedAmount) > 1e-8) {
+        fail('El monto mensual debe ser un importe válido en USD, con hasta dos decimales.');
+    }
+    const dueDay = Number(input.dueDay);
+    if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) {
+        fail('El día de vencimiento debe estar entre 1 y 31.');
+    }
+    const startMonth = validateContractMonth(input.startMonth, 'inicio');
+    const hasEndMonth = input.endMonth !== undefined && input.endMonth !== null && input.endMonth !== '';
+    if (hasEndMonth && typeof input.endMonth !== 'string') {
+        fail('El mes de finalización no es válido.');
+    }
+    const endMonth = hasEndMonth ? validateContractMonth(input.endMonth, 'finalización') : '';
+    if (endMonth && endMonth < startMonth) fail('El mes de finalización no puede preceder al inicio.');
+    const notes = input.notes ?? '';
+    if (typeof notes !== 'string' || notes.length > 1000) {
+        fail('Las notas del contrato exceden el formato permitido.');
+    }
+    const id = input.id === undefined || input.id === ''
+        ? randomBytes(16).toString('hex')
+        : validateContractId(input.id);
+    const now = new Date().toISOString();
+    return {
+        id,
+        clientId,
+        clientName: client?.name || existing.clientName,
+        description,
+        monthlyAmount: roundedAmount,
+        dueDay,
+        startMonth,
+        endMonth,
+        notes: notes.trim(),
+        createdAt: existing?.createdAt || now,
+        updatedAt: now
+    };
+}
+
 async function supabaseRequest(table, query = '', options = {}) {
     const url = `${supabaseUrl}/rest/v1/${table}${query ? `?${query}` : ''}`;
     const response = await fetch(url, {
@@ -364,16 +460,21 @@ async function saveIssuer(issuer) {
     });
 }
 
-async function getClients() {
-    const clients = [];
+async function getSettingsRowsByPrefix(prefix) {
+    const rows = [];
     for (let offset = 0; ; offset += 1000) {
-        const rows = await supabaseRequest(
+        const page = await supabaseRequest(
             'facturapro_settings',
-            `select=key,value&key=like.client%3A%25&limit=1000&offset=${offset}`
+            `select=key,value&key=like.${encodeURIComponent(`${prefix}%`)}&limit=1000&offset=${offset}`
         );
-        clients.push(...rows.map(row => ({ ...row.value, id: row.key.slice('client:'.length) })));
-        if (rows.length < 1000) return validateClients(clients);
+        rows.push(...page);
+        if (page.length < 1000) return rows;
     }
+}
+
+async function getClients() {
+    const rows = await getSettingsRowsByPrefix('client:');
+    return validateClients(rows.map(row => ({ ...row.value, id: row.key.slice('client:'.length) })));
 }
 
 async function saveClient(client) {
@@ -432,6 +533,106 @@ async function removeClient(id) {
     const validId = validateClientId(id);
     if (!await deleteClient(validId)) return false;
     return true;
+}
+
+async function getContract(id) {
+    const validId = validateContractId(id);
+    const rows = await supabaseRequest(
+        'facturapro_settings',
+        `select=key,value&key=eq.${encodeURIComponent(`contract:${validId}`)}&limit=1`
+    );
+    return rows[0]?.value || null;
+}
+
+async function saveContract(contract) {
+    const { id, ...value } = contract;
+    await supabaseRequest('facturapro_settings', 'on_conflict=key', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: { key: `contract:${id}`, value }
+    });
+}
+
+async function getContractPayments(contractId = null) {
+    const prefix = contractId === null ? 'contract-payment:' : `contract-payment:${validateContractId(contractId)}:`;
+    const rows = await getSettingsRowsByPrefix(prefix);
+    return rows.map(row => {
+        const match = row.key.match(/^contract-payment:([a-zA-Z0-9_-]{1,100}):(\d{4}-(0[1-9]|1[0-2]))$/);
+        const value = row.value;
+        if (!match || !value || typeof value !== 'object' || Array.isArray(value) ||
+            value.contractId !== match[1] || value.month !== match[2] ||
+            !isValidContractMonth(value.month) || !isValidContractPaymentDate(value.paidAt)) {
+            throw new Error('Los datos de un pago de contrato guardado no son válidos.');
+        }
+        return { contractId: match[1], month: match[2], paidAt: value.paidAt };
+    });
+}
+
+async function saveContractPayment(contractId, month, paidAt) {
+    const id = validateContractId(contractId);
+    await supabaseRequest('facturapro_settings', 'on_conflict=key', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: {
+            key: `contract-payment:${id}:${month}`,
+            value: { contractId: id, month, paidAt, updatedAt: new Date().toISOString() }
+        }
+    });
+}
+
+async function removeContractPayment(contractId, month) {
+    const id = validateContractId(contractId);
+    await supabaseRequest(
+        'facturapro_settings',
+        `key=eq.${encodeURIComponent(`contract-payment:${id}:${month}`)}&select=key`,
+        { method: 'DELETE', prefer: 'return=representation' }
+    );
+}
+
+async function deleteContractPayments(contractId) {
+    const id = validateContractId(contractId);
+    await supabaseRequest(
+        'facturapro_settings',
+        `key=like.${encodeURIComponent(`contract-payment:${id}:%`)}&select=key`,
+        { method: 'DELETE', prefer: 'return=representation' }
+    );
+}
+
+async function deleteContract(id) {
+    const validId = validateContractId(id);
+    await deleteContractPayments(validId);
+    const rows = await supabaseRequest(
+        'facturapro_settings',
+        `key=eq.${encodeURIComponent(`contract:${validId}`)}&select=key`,
+        { method: 'DELETE', prefer: 'return=representation' }
+    );
+    return rows.length > 0;
+}
+
+async function listContracts() {
+    const [contractRows, payments] = await Promise.all([
+        getSettingsRowsByPrefix('contract:'),
+        getContractPayments()
+    ]);
+    const paymentsByContract = new Map();
+    for (const payment of payments) {
+        const contractPayments = paymentsByContract.get(payment.contractId) || [];
+        contractPayments.push({ month: payment.month, paidAt: payment.paidAt });
+        paymentsByContract.set(payment.contractId, contractPayments);
+    }
+    return contractRows.map(row => {
+        const id = row.key.slice('contract:'.length);
+        const contract = row.value;
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(id) || !contract ||
+            typeof contract !== 'object' || Array.isArray(contract)) {
+            throw new Error('Los datos de un contrato guardado no son válidos.');
+        }
+        return {
+            ...contract,
+            id,
+            payments: (paymentsByContract.get(id) || []).sort((a, b) => a.month.localeCompare(b.month))
+        };
+    }).sort((a, b) => a.clientName.localeCompare(b.clientName, 'es'));
 }
 
 async function listInvoices() {
@@ -642,6 +843,55 @@ async function handleApi(request, response, url) {
     if (clientRoute && method === 'DELETE') {
         const id = decodeURIComponent(clientRoute[1]);
         if (!await removeClient(id)) return jsonResponse(response, 404, { error: 'No se encontró el cliente.' });
+        return jsonResponse(response, 200, { deleted: true });
+    }
+    if (method === 'GET' && path === '/api/contracts') {
+        return jsonResponse(response, 200, { contracts: await listContracts() });
+    }
+    if (method === 'PUT' && path === '/api/contracts') {
+        const input = await readJson(request);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            return jsonResponse(response, 400, { error: 'Los datos del contrato no son válidos.' });
+        }
+        const existing = input.id ? await getContract(validateContractId(input.id)) : null;
+        if (input.id && !existing) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
+        const clientId = validateClientId(input.clientId);
+        const clients = await getClients();
+        const client = clients.find(item => item.id === clientId) || null;
+        const contract = validateContract(input, client, existing);
+        await saveContract(contract);
+        const payments = await getContractPayments(contract.id);
+        return jsonResponse(response, existing ? 200 : 201, {
+            contract: { ...contract, payments: payments.map(({ month, paidAt }) => ({ month, paidAt })) }
+        });
+    }
+    const contractPaymentRoute = path.match(/^\/api\/contracts\/([^/]+)\/payments\/([^/]+)$/);
+    if (contractPaymentRoute && ['PUT', 'DELETE'].includes(method)) {
+        const id = decodeURIComponent(contractPaymentRoute[1]);
+        const contractId = validateContractId(id);
+        const month = decodeURIComponent(contractPaymentRoute[2]);
+        if (!isValidContractMonth(month)) {
+            return jsonResponse(response, 400, { error: 'El mes del pago no es válido.' });
+        }
+        const contract = await getContract(contractId);
+        if (!contract) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
+        if (month < contract.startMonth || (contract.endMonth && month > contract.endMonth)) {
+            return jsonResponse(response, 400, { error: 'El contrato no está vigente durante ese mes.' });
+        }
+        if (method === 'PUT') {
+            const body = await readJson(request);
+            const paidAt = validateContractPaymentDate(body?.paidAt);
+            await saveContractPayment(contractId, month, paidAt);
+            return jsonResponse(response, 200, { payment: { month, paidAt } });
+        }
+        await removeContractPayment(contractId, month);
+        return jsonResponse(response, 200, { deleted: true });
+    }
+    const contractRoute = path.match(/^\/api\/contracts\/([^/]+)$/);
+    if (contractRoute && method === 'DELETE') {
+        const id = decodeURIComponent(contractRoute[1]);
+        if (!await getContract(id)) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
+        if (!await deleteContract(id)) return jsonResponse(response, 404, { error: 'No se encontró el contrato.' });
         return jsonResponse(response, 200, { deleted: true });
     }
     if (method === 'PUT' && path === '/api/settings/issuer') {

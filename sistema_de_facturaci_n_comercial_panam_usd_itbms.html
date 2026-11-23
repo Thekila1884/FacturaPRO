@@ -584,6 +584,10 @@
                         <i data-lucide="credit-card" class="w-4 h-4"></i>
                         <span>Pagos</span>
                     </button>
+                    <button id="tab-btn-contracts" onclick="switchTab('contracts')" class="flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                        <i data-lucide="file-signature" class="w-4 h-4"></i>
+                        <span>Contratos</span>
+                    </button>
                 </nav>
 
                 <!-- Acciones Rápidas Globales -->
@@ -716,6 +720,14 @@
                         <span class="block text-lg font-bold text-slate-900">Configuración de pagos</span>
                         <span class="mt-2 block text-sm leading-relaxed text-slate-500">Guardar instrucciones para ACH, Yappy, efectivo, tarjetas y crédito.</span>
                         <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-violet-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+                    </button>
+                    <button type="button" onclick="switchTab('contracts')" class="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md">
+                        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-600 group-hover:text-white">
+                            <i data-lucide="file-signature" class="h-6 w-6"></i>
+                        </span>
+                        <span class="block text-lg font-bold text-slate-900">Contratos mensuales</span>
+                        <span class="mt-2 block text-sm leading-relaxed text-slate-500">Controlar compromisos mensuales, vencimientos y pagos por cliente.</span>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
                     </button>
                 </div>
             </div>
@@ -916,6 +928,122 @@
                 <i data-lucide="check-circle-2" class="h-4 w-4 shrink-0"></i>
                 Los cambios se guardan automáticamente en la configuración de tu cuenta.
             </p>
+        </section>
+
+        <section id="contracts-view" class="hidden space-y-6">
+            <div class="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Contratos mensuales</h1>
+                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">Registra el compromiso mensual de cada cliente y controla pagos completos con su fecha. Este módulo no crea facturas automáticamente.</p>
+                </div>
+                <div class="flex flex-wrap items-end gap-2">
+                    <div>
+                        <label for="contracts-month" class="mb-1 block text-xs font-semibold text-slate-600">Período de seguimiento</label>
+                        <input id="contracts-month" type="month" onchange="renderContracts()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </div>
+                    <button type="button" onclick="downloadContractsCsv()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">CSV mensual</button>
+                    <button type="button" onclick="printContractsPdf()" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">PDF mensual</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-semibold uppercase text-slate-500">Contratos vigentes</p>
+                    <p id="contract-month-count" class="mt-2 text-2xl font-extrabold text-slate-900">0</p>
+                </article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-semibold uppercase text-slate-500">Compromiso del mes</p>
+                    <p id="contract-month-expected" class="mt-2 text-2xl font-extrabold text-slate-900">$0.00</p>
+                </article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-semibold uppercase text-slate-500">Pagado</p>
+                    <p id="contract-month-paid" class="mt-2 text-2xl font-extrabold text-emerald-700">$0.00</p>
+                </article>
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-semibold uppercase text-slate-500">Vencido pendiente</p>
+                    <p id="contract-month-overdue" class="mt-2 text-2xl font-extrabold text-rose-700">$0.00</p>
+                </article>
+            </div>
+
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="border-b border-slate-100 p-5">
+                    <h2 class="font-bold text-slate-900">Seguimiento de pagos</h2>
+                    <p class="mt-1 text-xs text-slate-500">Los vencimientos configurados entre los días 29 y 31 se ajustan al último día disponible del mes.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[900px] text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                            <tr><th class="px-4 py-3">Cliente / concepto</th><th class="px-4 py-3">Vencimiento</th><th class="px-4 py-3 text-right">Monto</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Fecha de pago / acción</th></tr>
+                        </thead>
+                        <tbody id="contract-payments-tbody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <p id="contract-payments-empty" class="hidden p-8 text-center text-sm text-slate-500">No hay contratos vigentes para este período.</p>
+            </section>
+
+            <form id="contract-form" onsubmit="saveContractForm(event)" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <input type="hidden" id="contract-id">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 id="contract-form-title" class="text-base font-bold text-slate-900">Crear contrato mensual</h2>
+                        <p class="mt-1 text-xs text-slate-500">Vincula el contrato con un cliente guardado en el catálogo.</p>
+                    </div>
+                    <button type="button" onclick="switchTab('clients')" class="text-xs font-semibold text-emerald-700 hover:text-emerald-600">Administrar clientes</button>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                        <label for="contract-client-id" class="mb-1 block text-xs font-semibold text-slate-700">Cliente *</label>
+                        <select id="contract-client-id" required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"></select>
+                    </div>
+                    <div>
+                        <label for="contract-description" class="mb-1 block text-xs font-semibold text-slate-700">Servicio / concepto *</label>
+                        <input id="contract-description" required maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="contract-monthly-amount" class="mb-1 block text-xs font-semibold text-slate-700">Monto mensual (USD) *</label>
+                        <input id="contract-monthly-amount" type="number" min="0.01" max="1000000000" step="0.01" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="contract-due-day" class="mb-1 block text-xs font-semibold text-slate-700">Día de vencimiento *</label>
+                        <input id="contract-due-day" type="number" min="1" max="31" step="1" value="1" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="contract-start-month" class="mb-1 block text-xs font-semibold text-slate-700">Mes de inicio *</label>
+                        <input id="contract-start-month" type="month" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="contract-end-month" class="mb-1 block text-xs font-semibold text-slate-700">Mes de finalización (opcional)</label>
+                        <input id="contract-end-month" type="month" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <label for="contract-notes" class="mb-1 block text-xs font-semibold text-slate-700">Notas</label>
+                        <textarea id="contract-notes" rows="2" maxlength="1000" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
+                    </div>
+                </div>
+                <p id="contract-client-help" class="mt-3 hidden text-xs text-amber-700">Agrega primero un cliente en el catálogo para crear un contrato.</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button id="contract-form-submit" type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">Guardar contrato</button>
+                    <button id="contract-form-cancel" type="button" onclick="resetContractForm()" class="hidden rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancelar edición</button>
+                </div>
+            </form>
+
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">
+                    <div>
+                        <h2 class="font-bold text-slate-900">Contratos guardados</h2>
+                        <p id="contract-list-count" class="mt-1 text-xs text-slate-500">0 contratos</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[850px] text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                            <tr><th class="px-4 py-3">Cliente / concepto</th><th class="px-4 py-3 text-right">Monto mensual</th><th class="px-4 py-3">Vigencia</th><th class="px-4 py-3">Vence el día</th><th class="px-4 py-3 text-right">Acciones</th></tr>
+                        </thead>
+                        <tbody id="contracts-tbody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <p id="contracts-empty" class="hidden p-8 text-center text-sm text-slate-500">Aún no hay contratos mensuales guardados.</p>
+            </section>
         </section>
 
         <!-- =================================================================== -->
@@ -1491,6 +1619,8 @@
         let invoiceItems = [];       // Lista de ítems actuales en el formulario
         let savedInvoices = [];      // Historial cargado desde el servidor
         let savedClients = [];
+        let savedContracts = [];
+        let currentEditingContractId = null;
         let authMode = 'login';
         let loginScreenRequested = false;
         let issuerSaveTimer = null;
@@ -1616,6 +1746,8 @@
             try {
                 await apiRequest('/api/auth/logout', { method: 'POST', body: '{}' });
                 authMode = 'login';
+                savedContracts = [];
+                currentEditingContractId = null;
                 showWelcomeView();
             } catch (error) {
                 showToast(error.message, 'error');
@@ -1623,8 +1755,11 @@
         }
 
         async function enterApplication() {
-            const data = await apiRequest('/api/bootstrap');
-            const clientData = await apiRequest('/api/clients');
+            const [data, clientData, contractData] = await Promise.all([
+                apiRequest('/api/bootstrap'),
+                apiRequest('/api/clients'),
+                apiRequest('/api/contracts')
+            ]);
             const legacyIssuer = localStorage.getItem(LEGACY_STORAGE_KEYS.ISSUER);
             const legacyInvoices = localStorage.getItem(LEGACY_STORAGE_KEYS.INVOICES);
             let issuer = data.issuer;
@@ -1650,9 +1785,11 @@
             }
             savedInvoices = invoices;
             savedClients = clientData.clients;
+            savedContracts = contractData.contracts;
             loadIssuerData(issuer);
             renderClientSelect();
             renderClientCatalog();
+            resetContractForm();
             resetReportFilters();
             document.getElementById('welcome-view').classList.add('hidden');
             document.getElementById('auth-view').classList.add('hidden');
@@ -2372,6 +2509,7 @@
                 });
                 savedClients = savedClients.filter(item => item.id !== result.client.id).concat(result.client);
                 renderClientSelect();
+                renderContractClientSelect();
                 renderClientCatalog();
                 resetCatalogClientForm();
                 showToast('Cliente guardado correctamente', 'success');
@@ -2467,6 +2605,7 @@
                     savedClients = savedClients.filter(item => item.id !== id);
                     if (currentEditingClientId === id) resetCatalogClientForm();
                     renderClientSelect();
+                    renderContractClientSelect();
                     renderClientCatalog();
                     closeConfirmModal();
                     showToast('Cliente eliminado del catálogo', 'success');
@@ -3396,6 +3535,430 @@
             lucide.createIcons();
         }
 
+        function isValidContractMonth(month) {
+            if (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return false;
+            const year = Number(month.slice(0, 4));
+            return year >= 1900 && year <= 9999;
+        }
+
+        function getContractDueDate(month, dueDay) {
+            if (!isValidContractMonth(month) || !Number.isInteger(Number(dueDay)) ||
+                Number(dueDay) < 1 || Number(dueDay) > 31) return '';
+            const [year, monthNumber] = month.split('-').map(Number);
+            const lastDay = new Date(year, monthNumber, 0).getDate();
+            return `${month}-${String(Math.min(Number(dueDay), lastDay)).padStart(2, '0')}`;
+        }
+
+        function getContractMonthSnapshot(contract, month, today = getTodayISO()) {
+            const payment = (contract.payments || []).find(item => item.month === month) || null;
+            const dueDate = getContractDueDate(month, Number(contract.dueDay));
+            return {
+                payment,
+                dueDate,
+                status: payment ? 'Pagado' : dueDate && dueDate < today ? 'Vencido' : 'Pendiente'
+            };
+        }
+
+        function getContractMonthRows(month, today = getTodayISO()) {
+            return savedContracts
+                .filter(contract => contract.startMonth <= month && (!contract.endMonth || month <= contract.endMonth))
+                .map(contract => ({
+                    contract,
+                    clientName: getContractClientName(contract),
+                    amount: Number(contract.monthlyAmount) || 0,
+                    ...getContractMonthSnapshot(contract, month, today)
+                }));
+        }
+
+        function getContractClientName(contract) {
+            return savedClients.find(client => client.id === contract.clientId)?.name ||
+                contract.clientName || 'Cliente eliminado del catálogo';
+        }
+
+        function renderContractClientSelect(selectedId = null) {
+            const select = document.getElementById('contract-client-id');
+            const currentId = selectedId ?? select.value;
+            select.replaceChildren(new Option('Selecciona un cliente', ''));
+            savedClients
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+                .forEach(client => select.appendChild(new Option(client.name, client.id)));
+            if (currentId && !savedClients.some(client => client.id === currentId)) {
+                const oldContract = savedContracts.find(contract => contract.clientId === currentId);
+                if (oldContract) {
+                    select.appendChild(new Option(`${oldContract.clientName} (cliente eliminado)`, currentId));
+                }
+            }
+            if (currentId) select.value = currentId;
+            const retainedClient = currentId && savedContracts.some(contract => contract.clientId === currentId);
+            document.getElementById('contract-client-help').classList.toggle(
+                'hidden',
+                savedClients.length > 0 || Boolean(retainedClient)
+            );
+            document.getElementById('contract-form-submit').disabled =
+                savedClients.length === 0 && !retainedClient;
+        }
+
+        function resetContractForm() {
+            currentEditingContractId = null;
+            document.getElementById('contract-form').reset();
+            document.getElementById('contract-id').value = '';
+            document.getElementById('contract-form-title').textContent = 'Crear contrato mensual';
+            document.getElementById('contract-form-submit').textContent = 'Guardar contrato';
+            document.getElementById('contract-form-cancel').classList.add('hidden');
+            document.getElementById('contract-due-day').value = '1';
+            const month = document.getElementById('contracts-month').value || getTodayISO().slice(0, 7);
+            document.getElementById('contract-start-month').value = isValidContractMonth(month)
+                ? month
+                : getTodayISO().slice(0, 7);
+            renderContractClientSelect('');
+        }
+
+        function renderContracts() {
+            const monthInput = document.getElementById('contracts-month');
+            if (!isValidContractMonth(monthInput.value)) monthInput.value = getTodayISO().slice(0, 7);
+            renderContractClientSelect();
+            renderContractPayments(monthInput.value);
+            renderContractList();
+        }
+
+        function renderContractPayments(month) {
+            const today = getTodayISO();
+            const contractRows = getContractMonthRows(month, today);
+            const tbody = document.getElementById('contract-payments-tbody');
+            tbody.replaceChildren();
+            let expected = 0;
+            let paid = 0;
+            let overdue = 0;
+
+            contractRows.forEach(({ contract, clientName: clientDisplayName, amount, payment, dueDate, status }) => {
+                expected += amount;
+                if (payment) paid += amount;
+                else if (status === 'Vencido') overdue += amount;
+
+                const row = document.createElement('tr');
+                const clientCell = document.createElement('td');
+                clientCell.className = 'px-4 py-3';
+                const clientName = document.createElement('p');
+                clientName.className = 'font-semibold text-slate-800';
+                clientName.textContent = clientDisplayName;
+                const description = document.createElement('p');
+                description.className = 'mt-0.5 text-xs text-slate-500';
+                description.textContent = contract.description;
+                clientCell.append(clientName, description);
+
+                const dueCell = document.createElement('td');
+                dueCell.className = 'px-4 py-3 whitespace-nowrap text-slate-600';
+                dueCell.textContent = formatDateReadable(dueDate);
+
+                const amountCell = document.createElement('td');
+                amountCell.className = 'px-4 py-3 text-right font-semibold text-slate-800';
+                amountCell.textContent = formatUSD(amount);
+
+                const statusCell = document.createElement('td');
+                statusCell.className = 'px-4 py-3';
+                const statusBadge = document.createElement('span');
+                statusBadge.className = `inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    status === 'Pagado'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : status === 'Vencido'
+                            ? 'bg-rose-50 text-rose-700'
+                            : 'bg-amber-50 text-amber-700'
+                }`;
+                statusBadge.textContent = status;
+                statusCell.appendChild(statusBadge);
+
+                const actionCell = document.createElement('td');
+                actionCell.className = 'px-4 py-3';
+                const actionGroup = document.createElement('div');
+                actionGroup.className = 'flex flex-wrap items-center gap-2';
+                const dateInput = document.createElement('input');
+                dateInput.type = 'date';
+                dateInput.id = `contract-payment-date-${contract.id}`;
+                dateInput.value = payment?.paidAt || today;
+                dateInput.setAttribute('aria-label', `Fecha del pago: ${clientDisplayName}`);
+                dateInput.className = 'rounded-lg border border-slate-300 px-2 py-1.5 text-xs';
+                const saveButton = document.createElement('button');
+                saveButton.type = 'button';
+                saveButton.className = 'rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500';
+                saveButton.textContent = payment ? 'Actualizar pago' : 'Registrar pago';
+                saveButton.addEventListener('click', () =>
+                    saveContractPaymentRecord(contract.id, month, dateInput.value, saveButton)
+                );
+                actionGroup.append(dateInput, saveButton);
+                if (payment) {
+                    const pendingButton = document.createElement('button');
+                    pendingButton.type = 'button';
+                    pendingButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
+                    pendingButton.textContent = 'Marcar pendiente';
+                    pendingButton.addEventListener('click', () => requestRemoveContractPayment(contract.id, month));
+                    actionGroup.appendChild(pendingButton);
+                }
+                actionCell.appendChild(actionGroup);
+                row.append(clientCell, dueCell, amountCell, statusCell, actionCell);
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('contract-month-count').textContent = contractRows.length.toLocaleString('es-PA');
+            document.getElementById('contract-month-expected').textContent = formatUSD(expected);
+            document.getElementById('contract-month-paid').textContent = formatUSD(paid);
+            document.getElementById('contract-month-overdue').textContent = formatUSD(overdue);
+            document.getElementById('contract-payments-empty').classList.toggle('hidden', contractRows.length > 0);
+        }
+
+        function getContractExportRows() {
+            const month = document.getElementById('contracts-month').value;
+            return getContractMonthRows(month).map(({ contract, clientName, amount, payment, dueDate, status }) => [
+                month,
+                clientName,
+                contract.description,
+                amount,
+                contract.dueDay,
+                dueDate,
+                status,
+                payment?.paidAt || '',
+                contract.startMonth,
+                contract.endMonth || '',
+                contract.notes || ''
+            ]);
+        }
+
+        function downloadContractsCsv() {
+            const month = document.getElementById('contracts-month').value;
+            downloadCsvFile(`facturapro-contratos-${month}`, [
+                'Período',
+                'Cliente',
+                'Servicio / concepto',
+                'Monto mensual USD',
+                'Día de vencimiento',
+                'Fecha de vencimiento',
+                'Estado',
+                'Fecha de pago',
+                'Inicio',
+                'Finalización',
+                'Notas'
+            ], getContractExportRows());
+        }
+
+        function printContractsPdf() {
+            const month = document.getElementById('contracts-month').value;
+            const rows = getContractMonthRows(month);
+            const expected = rows.reduce((total, row) => total + row.amount, 0);
+            const paid = rows.reduce((total, row) => total + (row.payment ? row.amount : 0), 0);
+            const overdue = rows.reduce((total, row) => total + (row.status === 'Vencido' ? row.amount : 0), 0);
+            const report = createPrintDocument(
+                `Contratos mensuales - ${month}`,
+                `${rows.length.toLocaleString('es-PA')} contrato(s) vigente(s) • USD`
+            );
+            if (!report) return;
+            appendPrintTable(report.printDocument, report.printDocument.body, ['Resumen', 'Monto USD'], [
+                ['Compromiso mensual', formatUSD(expected)],
+                ['Pagado', formatUSD(paid)],
+                ['Vencido pendiente', formatUSD(overdue)]
+            ]);
+            appendPrintTable(report.printDocument, report.printDocument.body, [
+                'Cliente',
+                'Servicio / concepto',
+                'Monto mensual USD',
+                'Vencimiento',
+                'Estado',
+                'Fecha de pago',
+                'Vigencia',
+                'Notas'
+            ], rows.map(({ contract, clientName, amount, payment, dueDate, status }) => [
+                clientName,
+                contract.description,
+                formatUSD(amount),
+                formatDateReadable(dueDate),
+                status,
+                payment?.paidAt ? formatDateReadable(payment.paidAt) : '—',
+                `${contract.startMonth} – ${contract.endMonth || 'Indefinido'}`,
+                contract.notes || '—'
+            ]));
+            launchPrintDialog(report.printWindow);
+        }
+
+        function renderContractList() {
+            const tbody = document.getElementById('contracts-tbody');
+            tbody.replaceChildren();
+            document.getElementById('contract-list-count').textContent =
+                `${savedContracts.length.toLocaleString('es-PA')} contrato${savedContracts.length === 1 ? '' : 's'}`;
+            document.getElementById('contracts-empty').classList.toggle('hidden', savedContracts.length > 0);
+            savedContracts.forEach(contract => {
+                const row = document.createElement('tr');
+                const clientCell = document.createElement('td');
+                clientCell.className = 'px-4 py-3';
+                const name = document.createElement('p');
+                name.className = 'font-semibold text-slate-800';
+                name.textContent = getContractClientName(contract);
+                const description = document.createElement('p');
+                description.className = 'mt-0.5 text-xs text-slate-500';
+                description.textContent = contract.description;
+                clientCell.append(name, description);
+
+                const amountCell = document.createElement('td');
+                amountCell.className = 'px-4 py-3 text-right font-semibold text-slate-800';
+                amountCell.textContent = formatUSD(Number(contract.monthlyAmount) || 0);
+                const termCell = document.createElement('td');
+                termCell.className = 'px-4 py-3 whitespace-nowrap text-slate-600';
+                termCell.textContent = `${contract.startMonth} – ${contract.endMonth || 'Indefinido'}`;
+                const dueCell = document.createElement('td');
+                dueCell.className = 'px-4 py-3 text-slate-600';
+                dueCell.textContent = `Día ${contract.dueDay}`;
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'px-4 py-3 text-right';
+                const actions = document.createElement('div');
+                actions.className = 'inline-flex gap-2';
+                const editButton = document.createElement('button');
+                editButton.type = 'button';
+                editButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
+                editButton.textContent = 'Editar';
+                editButton.addEventListener('click', () => editContract(contract.id));
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50';
+                deleteButton.textContent = 'Eliminar';
+                deleteButton.addEventListener('click', () => requestDeleteContract(contract.id));
+                actions.append(editButton, deleteButton);
+                actionsCell.appendChild(actions);
+                row.append(clientCell, amountCell, termCell, dueCell, actionsCell);
+                tbody.appendChild(row);
+            });
+        }
+
+        function editContract(id) {
+            const contract = savedContracts.find(item => item.id === id);
+            if (!contract) return;
+            currentEditingContractId = id;
+            document.getElementById('contract-id').value = contract.id;
+            document.getElementById('contract-description').value = contract.description;
+            document.getElementById('contract-monthly-amount').value = contract.monthlyAmount;
+            document.getElementById('contract-due-day').value = contract.dueDay;
+            document.getElementById('contract-start-month').value = contract.startMonth;
+            document.getElementById('contract-end-month').value = contract.endMonth || '';
+            document.getElementById('contract-notes').value = contract.notes || '';
+            renderContractClientSelect(contract.clientId);
+            document.getElementById('contract-form-title').textContent = 'Editar contrato mensual';
+            document.getElementById('contract-form-submit').textContent = 'Guardar cambios';
+            document.getElementById('contract-form-cancel').classList.remove('hidden');
+            document.getElementById('contract-description').focus();
+            document.getElementById('contract-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        async function saveContractForm(event) {
+            event.preventDefault();
+            const button = document.getElementById('contract-form-submit');
+            const contract = {
+                ...(currentEditingContractId ? { id: currentEditingContractId } : {}),
+                clientId: document.getElementById('contract-client-id').value,
+                description: document.getElementById('contract-description').value.trim(),
+                monthlyAmount: Number(document.getElementById('contract-monthly-amount').value),
+                dueDay: Number(document.getElementById('contract-due-day').value),
+                startMonth: document.getElementById('contract-start-month').value,
+                endMonth: document.getElementById('contract-end-month').value,
+                notes: document.getElementById('contract-notes').value.trim()
+            };
+            button.disabled = true;
+            try {
+                const result = await apiRequest('/api/contracts', {
+                    method: 'PUT',
+                    body: JSON.stringify(contract)
+                });
+                const index = savedContracts.findIndex(item => item.id === result.contract.id);
+                if (index === -1) savedContracts.push(result.contract);
+                else savedContracts[index] = result.contract;
+                resetContractForm();
+                renderContracts();
+                showToast('Contrato guardado correctamente', 'success');
+            } catch (error) {
+                showToast(`No se pudo guardar el contrato: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function saveContractPaymentRecord(id, month, paidAt, button) {
+            if (!paidAt) {
+                showToast('Selecciona la fecha en que se recibió el pago.', 'error');
+                return;
+            }
+            button.disabled = true;
+            try {
+                const result = await apiRequest(
+                    `/api/contracts/${encodeURIComponent(id)}/payments/${encodeURIComponent(month)}`,
+                    { method: 'PUT', body: JSON.stringify({ paidAt }) }
+                );
+                const contract = savedContracts.find(item => item.id === id);
+                if (contract) {
+                    contract.payments = (contract.payments || [])
+                        .filter(payment => payment.month !== month)
+                        .concat(result.payment);
+                }
+                renderContracts();
+                showToast('Pago mensual registrado', 'success');
+            } catch (error) {
+                showToast(`No se pudo registrar el pago: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        function openContractConfirmation(title, message, buttonLabel, onConfirm) {
+            const modal = document.getElementById('confirm-modal');
+            document.getElementById('confirm-modal-title').textContent = title;
+            document.getElementById('confirm-modal-message').textContent = message;
+            const confirmButton = document.getElementById('confirm-modal-btn');
+            confirmButton.textContent = buttonLabel;
+            confirmButton.onclick = async () => {
+                confirmButton.disabled = true;
+                try {
+                    await onConfirm();
+                    closeConfirmModal();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    confirmButton.disabled = false;
+                }
+            };
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function requestRemoveContractPayment(id, month) {
+            openContractConfirmation(
+                'Quitar registro de pago',
+                `El pago de ${month} volverá a estar pendiente. Puedes volver a registrarlo después.`,
+                'Marcar pendiente',
+                async () => {
+                    await apiRequest(
+                        `/api/contracts/${encodeURIComponent(id)}/payments/${encodeURIComponent(month)}`,
+                        { method: 'DELETE' }
+                    );
+                    const contract = savedContracts.find(item => item.id === id);
+                    if (contract) contract.payments = (contract.payments || []).filter(payment => payment.month !== month);
+                    renderContracts();
+                    showToast('El pago volvió a quedar pendiente', 'success');
+                }
+            );
+        }
+
+        function requestDeleteContract(id) {
+            const contract = savedContracts.find(item => item.id === id);
+            if (!contract) return;
+            openContractConfirmation(
+                `Eliminar contrato de ${getContractClientName(contract)}`,
+                'Se eliminará el contrato y todo su historial de pagos. Esta acción no se puede deshacer.',
+                'Eliminar contrato',
+                async () => {
+                    await apiRequest(`/api/contracts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    savedContracts = savedContracts.filter(item => item.id !== id);
+                    if (currentEditingContractId === id) resetContractForm();
+                    renderContracts();
+                    showToast('Contrato eliminado', 'success');
+                }
+            );
+        }
+
         // =========================================================================
         // NAVEGACIÓN ENTRE PESTAÑAS Y UTILIDADES UI
         // =========================================================================
@@ -3407,7 +3970,8 @@
                 clients: document.getElementById('clients-view'),
                 reports: document.getElementById('reports-view'),
                 receivables: document.getElementById('receivables-view'),
-                payments: document.getElementById('payments-view')
+                payments: document.getElementById('payments-view'),
+                contracts: document.getElementById('contracts-view')
             };
             const buttons = {
                 home: document.getElementById('tab-btn-home'),
@@ -3416,7 +3980,8 @@
                 clients: document.getElementById('tab-btn-clients'),
                 reports: document.getElementById('tab-btn-reports'),
                 receivables: document.getElementById('tab-btn-receivables'),
-                payments: document.getElementById('tab-btn-payments')
+                payments: document.getElementById('tab-btn-payments'),
+                contracts: document.getElementById('tab-btn-contracts')
             };
             const activeClasses = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white shadow-sm';
             const inactiveClasses = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50';
@@ -3440,6 +4005,8 @@
                     document.getElementById('receivables-as-of').value = getTodayISO();
                 }
                 renderReceivables();
+            } else if (tabName === 'contracts') {
+                renderContracts();
             }
             lucide.createIcons();
         }

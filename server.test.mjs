@@ -257,6 +257,7 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     assert.deepEqual(await api('/api/auth/status'), { setupRequired: true, authenticated: false });
     await api('/api/bootstrap', { expected: 401 });
     await api('/api/clients', { expected: 401 });
+    await api('/api/contracts', { expected: 401 });
     await api('/api/auth/setup', {
         method: 'POST',
         body: { username: 'admin', password: 'Correct-Horse-Battery-1' },
@@ -347,6 +348,58 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         expected: 400
     });
     assert.deepEqual((await api('/api/clients')).clients, [updatedClient, secondClient]);
+
+    const newContract = {
+        clientId: 'client-1',
+        description: 'Soporte mensual',
+        monthlyAmount: 125.5,
+        dueDay: 31,
+        startMonth: '2025-01',
+        endMonth: '2025-12',
+        notes: 'Atención remota'
+    };
+    const createdContract = (await api('/api/contracts', {
+        method: 'PUT',
+        body: newContract,
+        expected: 201
+    })).contract;
+    assert.equal(createdContract.clientName, updatedClient.name);
+    assert.equal(createdContract.monthlyAmount, 125.5);
+    assert.deepEqual(createdContract.payments, []);
+    assert.deepEqual((await api('/api/contracts')).contracts.map(({ id }) => id), [createdContract.id]);
+    await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, id: createdContract.id, endMonth: '2024-12' },
+        expected: 400
+    });
+    await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, endMonth: 0 },
+        expected: 400
+    });
+    await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, clientId: 'unknown-client' },
+        expected: 400
+    });
+    const paymentPath = `/api/contracts/${createdContract.id}/payments/2025-02`;
+    await api(paymentPath, { method: 'PUT', body: { paidAt: '2025-02-28' } });
+    await api(paymentPath, { method: 'PUT', body: { paidAt: '2025-02-30' }, expected: 400 });
+    await api(`/api/contracts/${createdContract.id}/payments/2026-01`, {
+        method: 'PUT',
+        body: { paidAt: '2026-01-05' },
+        expected: 400
+    });
+    assert.deepEqual((await api('/api/contracts')).contracts[0].payments, [
+        { month: '2025-02', paidAt: '2025-02-28' }
+    ]);
+    await api(paymentPath, { method: 'DELETE' });
+    assert.deepEqual((await api('/api/contracts')).contracts[0].payments, []);
+    await api(paymentPath, { method: 'PUT', body: { paidAt: '2025-02-28' } });
+    await api(`/api/contracts/${createdContract.id}`, { method: 'DELETE' });
+    assert.deepEqual((await api('/api/contracts')).contracts, []);
+    assert.equal(tables.facturapro_settings.some(row => row.key.startsWith(`contract-payment:${createdContract.id}:`)), false);
+
     await api('/api/clients/client-1', { method: 'DELETE' });
     assert.deepEqual((await api('/api/clients')).clients, [secondClient]);
     await api('/api/clients/client-1', { method: 'DELETE', expected: 404 });
