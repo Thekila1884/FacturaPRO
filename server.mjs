@@ -240,11 +240,15 @@ function validateInvoice(input) {
     const exempt = subtotal ? rawExempt - discount * rawExempt / subtotal : 0;
     const itbms = taxable * 0.07;
 
+    if (input.title !== undefined && (typeof input.title !== 'string' || input.title.length > 200)) {
+        fail('El título de la factura debe ser texto de hasta 200 caracteres.');
+    }
     return {
         id: typeof input.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(input.id)
             ? input.id
             : randomBytes(16).toString('hex'),
         number,
+        title: typeof input.title === 'string' ? input.title.trim().slice(0, 200) : '',
         status: input.status,
         date,
         dueDate,
@@ -493,6 +497,10 @@ function validateContract(input, client, existing = null) {
     if (sendInvoiceEmail && !generateInvoices) {
         fail('Activa la generación automática de facturas antes de habilitar el envío por correo.');
     }
+    const invoiceTitle = input.invoiceTitle ?? existing?.invoiceTitle ?? '';
+    if (typeof invoiceTitle !== 'string' || invoiceTitle.length > 200) {
+        fail('El título de la factura debe ser texto de hasta 200 caracteres.');
+    }
     const notes = input.notes ?? '';
     if (typeof notes !== 'string' || notes.length > 1000) {
         fail('Las notas del contrato exceden el formato permitido.');
@@ -511,6 +519,7 @@ function validateContract(input, client, existing = null) {
         clientEmail: client?.email ?? existing?.clientEmail ?? '',
         clientAddress: client?.address ?? existing?.clientAddress ?? '',
         description,
+        invoiceTitle: invoiceTitle.trim(),
         defaultChargeAmount,
         generateInvoices,
         sendInvoiceEmail,
@@ -793,14 +802,16 @@ function formatInvoicePdfMoney(value) {
 
 function createInvoicePdf(invoice, issuer) {
     return new Promise((resolve, reject) => {
+        const invoiceTitle = invoice.title ||
+            (invoice.automaticContract ? 'Factura de contrato' : issuer.name || 'Factura comercial');
         const document = new PDFDocument({
             size: 'LETTER',
             margin: 42,
             bufferPages: true,
             info: {
-                Title: `Factura ${invoice.number}`,
+                Title: `${invoiceTitle} ${invoice.number}`,
                 Author: issuer.name,
-                Subject: 'Factura comercial'
+                Subject: invoiceTitle
             }
         });
         const chunks = [];
@@ -826,7 +837,13 @@ function createInvoicePdf(invoice, issuer) {
         const rucLine = issuer.ruc
             ? `RUC: ${issuer.ruc}${issuer.dv ? ` · DV: ${issuer.dv}` : ''}`
             : '';
-        const issuerLines = [rucLine, issuer.address, issuer.phone, issuer.email].filter(Boolean);
+        const issuerLines = [
+            ...(invoice.automaticContract && issuer.name ? [issuer.name] : []),
+            rucLine,
+            issuer.address,
+            issuer.phone,
+            issuer.email
+        ].filter(Boolean);
 
         const drawPageAccent = () => {
             document.save();
@@ -852,7 +869,7 @@ function createInvoicePdf(invoice, issuer) {
         const issuerWidth = 310;
         const invoiceX = margin + contentWidth * 0.61;
         const invoiceWidth = contentWidth * 0.39;
-        const issuerNameHeight = Math.max(20, document.heightOfString(issuer.name || 'Empresa', {
+        const invoiceTitleHeight = Math.max(20, document.heightOfString(invoiceTitle, {
             width: issuerWidth,
             font: 'Helvetica-Bold',
             fontSize: 17,
@@ -870,14 +887,14 @@ function createInvoicePdf(invoice, issuer) {
             fontSize: 13,
             lineGap: 1
         });
-        const headerHeight = Math.max(142, 43 + issuerNameHeight + issuerDetailsHeight, 92 + invoiceNumberHeight);
+        const headerHeight = Math.max(142, 43 + invoiceTitleHeight + issuerDetailsHeight, 92 + invoiceNumberHeight);
         document.rect(0, 6, pageWidth, headerHeight).fill(colors.navy);
         document.fillColor(colors.white).font('Helvetica-Bold').fontSize(17)
-            .text(issuer.name || 'Empresa', margin, 28, {
+            .text(invoiceTitle, margin, 28, {
                 width: issuerWidth,
                 lineGap: 1
             });
-        let issuerY = 31 + issuerNameHeight;
+        let issuerY = 31 + invoiceTitleHeight;
         issuerLines.forEach(line => {
             const lineHeight = document.heightOfString(line, {
                 width: issuerWidth,
@@ -1203,7 +1220,7 @@ function createInvoiceEmailContent(invoice, issuer) {
                                 <td align="right" style="color:#a7f3d0;font-size:11px;font-weight:700;letter-spacing:1.2px;">FACTURAPRO</td>
                             </tr>
                         </table>
-                        <p style="margin:24px 0 5px;color:#a7f3d0;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Factura comercial</p>
+                        <p style="margin:24px 0 5px;color:#a7f3d0;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">${escapeEmailHtml(invoice.title || 'Factura comercial')}</p>
                         <h1 style="margin:0;color:#ffffff;font-size:24px;line-height:1.3;">${escapeEmailHtml(invoice.number)}</h1>
                     </td>
                 </tr>
@@ -1325,7 +1342,7 @@ async function sendInvoiceEmail(invoice, issuer) {
         body: JSON.stringify({
             from: resendFromEmail,
             to: [recipient],
-            subject: `Factura ${invoice.number} · ${issuer.name}`,
+            subject: `${invoice.title || 'Factura'} ${invoice.number} · ${issuer.name}`,
             html: emailContent.html,
             text: emailContent.text,
             attachments: [{
@@ -1427,6 +1444,7 @@ function createContractInvoice(contract, charge, date, catalogClient) {
             status: charge.paidAt ? 'Pagada' : 'Pendiente',
             date,
             dueDate: charge.dueDate,
+            title: contract.invoiceTitle || 'Factura de contrato',
             paymentTerms: `Contrato recurrente · cada ${contract.billingIntervalDays} días`,
             client: {
                 name: catalogClient?.name || contract.clientName,

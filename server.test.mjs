@@ -392,6 +392,7 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     assert.equal(createdContract.clientName, updatedClient.name);
     assert.equal(createdContract.billingIntervalDays, 5);
     assert.equal(createdContract.defaultChargeAmount, 100.5);
+    assert.equal(createdContract.invoiceTitle, '');
     assert.equal(createdContract.startDate, today);
     assert.deepEqual(createdContract.payments, []);
     assert.deepEqual((await api('/api/contracts')).contracts.map(({ id }) => id), [createdContract.id]);
@@ -408,6 +409,11 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     await api('/api/contracts', {
         method: 'PUT',
         body: { ...newContract, billingIntervalDays: 364 },
+        expected: 400
+    });
+    await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, invoiceTitle: 123 },
         expected: 400
     });
     await api('/api/contracts', {
@@ -499,6 +505,7 @@ test('admin authentication protects Supabase-backed invoice operations', async (
             ...newContract,
             clientId: 'client-2',
             description: 'Servicio recurrente',
+            invoiceTitle: 'Soporte ejecutivo',
             defaultChargeAmount: 75,
             generateInvoices: true,
             sendInvoiceEmail: true,
@@ -547,6 +554,8 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         assert.equal(automation.emailed, 0);
         assert.equal(resendRequests.length, 1);
         assert.equal(resendRequests[0].to[0], secondClient.email);
+        assert.match(resendRequests[0].subject, /Soporte ejecutivo/);
+        assert.match(resendRequests[0].html, /Soporte ejecutivo/);
         assert.match(resendRequests[0].html, /Resumen de cargos/);
         assert.match(resendRequests[0].html, /TOTAL A PAGAR/);
         assert.match(resendRequests[0].text, /Fecha de vencimiento:/);
@@ -556,6 +565,7 @@ test('admin authentication protects Supabase-backed invoice operations', async (
             .find(item => item.automaticContract?.contractId === automatedContract.id);
         assert.ok(generatedInvoice);
         assert.equal(generatedInvoice.status, 'Pendiente');
+        assert.equal(generatedInvoice.title, 'Soporte ejecutivo');
         assert.equal(generatedInvoice.items[0].itbms, false);
         assert.equal(generatedInvoice.totals.grandTotal, 75);
         assert.equal(generatedInvoice.automaticContract.email.status, 'failed');

@@ -1000,6 +1000,11 @@
                         <input id="contract-description" required maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <div>
+                        <label for="contract-invoice-title" class="mb-1 block text-xs font-semibold text-slate-700">Título de factura (opcional)</label>
+                        <input id="contract-invoice-title" maxlength="200" placeholder="Factura de contrato" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <p class="mt-1 text-[11px] text-slate-500">Aparece como título principal del PDF y del correo. Si lo dejas vacío, dirá «Factura de contrato».</p>
+                    </div>
+                    <div>
                         <label for="contract-interval-days" class="mb-1 block text-xs font-semibold text-slate-700">Plan: días entre cobros *</label>
                         <input id="contract-interval-days" type="number" min="1" max="365" step="1" value="30" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                         <p class="mt-1 text-[11px] text-slate-500">Usa de 1 a 30 días, o 365 para el plan anual.</p>
@@ -4375,6 +4380,7 @@
             currentEditingContractId = id;
             document.getElementById('contract-id').value = contract.id;
             document.getElementById('contract-description').value = contract.description;
+            document.getElementById('contract-invoice-title').value = contract.invoiceTitle || '';
             document.getElementById('contract-interval-days').value = String(contract.billingIntervalDays || 30);
             document.getElementById('contract-interval-days').disabled = Boolean(contract.collectionStartedAt);
             document.getElementById('contract-plan-amount').value =
@@ -4401,6 +4407,7 @@
                 ...(currentEditingContractId ? { id: currentEditingContractId } : {}),
                 clientId: document.getElementById('contract-client-id').value,
                 description: document.getElementById('contract-description').value.trim(),
+                invoiceTitle: document.getElementById('contract-invoice-title').value.trim(),
                 billingIntervalDays: Number(document.getElementById('contract-interval-days').value),
                 defaultChargeAmount: Number(document.getElementById('contract-plan-amount').value),
                 generateInvoices: document.getElementById('contract-generate-invoice').checked,
