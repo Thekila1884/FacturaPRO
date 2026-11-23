@@ -790,119 +790,365 @@ function formatInvoicePdfMoney(value) {
 
 function createInvoicePdf(invoice, issuer) {
     return new Promise((resolve, reject) => {
-        const document = new PDFDocument({ size: 'LETTER', margin: 48 });
+        const document = new PDFDocument({
+            size: 'LETTER',
+            margin: 42,
+            bufferPages: true,
+            info: {
+                Title: `Factura ${invoice.number}`,
+                Author: issuer.name,
+                Subject: 'Factura comercial'
+            }
+        });
         const chunks = [];
         document.on('data', chunk => chunks.push(chunk));
         document.on('error', reject);
         document.on('end', () => resolve(Buffer.concat(chunks)));
 
-        const margin = 48;
-        const contentWidth = document.page.width - margin * 2;
-        document.fillColor('#0f172a').font('Helvetica-Bold').fontSize(18)
-            .text(issuer.name, { width: contentWidth * 0.7 });
-        document.fillColor('#475569').font('Helvetica').fontSize(9);
-        [
-            issuer.ruc ? `RUC: ${issuer.ruc}${issuer.dv ? ` · DV: ${issuer.dv}` : ''}` : '',
-            issuer.address,
-            issuer.phone ? `Tel: ${issuer.phone}` : '',
-            issuer.email
-        ].filter(Boolean).forEach(line => document.text(line));
+        const pageWidth = document.page.width;
+        const pageHeight = document.page.height;
+        const margin = 42;
+        const contentWidth = pageWidth - margin * 2;
+        const bottomLimit = pageHeight - 72;
+        const colors = {
+            navy: '#0f172a',
+            slate: '#334155',
+            muted: '#64748b',
+            line: '#e2e8f0',
+            pale: '#f8fafc',
+            green: '#047857',
+            greenPale: '#ecfdf5',
+            white: '#ffffff'
+        };
+        const rucLine = issuer.ruc
+            ? `RUC: ${issuer.ruc}${issuer.dv ? ` · DV: ${issuer.dv}` : ''}`
+            : '';
+        const issuerLines = [rucLine, issuer.address, issuer.phone, issuer.email].filter(Boolean);
 
-        document.moveDown(0.8);
-        document.fillColor('#0f172a').font('Helvetica-Bold').fontSize(16).text('FACTURA COMERCIAL');
-        document.fontSize(10).text(`Factura: ${invoice.number}`);
-        document.font('Helvetica').text(`Fecha de emisión: ${formatInvoicePdfDate(invoice.date)}`);
-        document.text(`Fecha de vencimiento: ${formatInvoicePdfDate(invoice.dueDate)}`);
-        document.text(`Estado: ${invoice.status}`);
+        const drawPageAccent = () => {
+            document.save();
+            document.rect(0, 0, pageWidth, 6).fill(colors.green);
+            document.fillColor(colors.muted).font('Helvetica-Bold').fontSize(8)
+                .text('FACTURAPRO  /  FACTURA COMERCIAL', margin, 18, {
+                    width: contentWidth * 0.55,
+                    lineBreak: false
+                });
+            document.fillColor(colors.slate).font('Helvetica').fontSize(8)
+                .text(invoice.number, margin + contentWidth * 0.55, 18, {
+                    width: contentWidth * 0.45,
+                    align: 'right',
+                    lineBreak: false
+                });
+            document.moveTo(margin, 34).lineTo(pageWidth - margin, 34)
+                .strokeColor(colors.line).lineWidth(0.7).stroke();
+            document.restore();
+        };
+        document.on('pageAdded', drawPageAccent);
+        drawPageAccent();
 
-        document.moveDown(0.8);
-        document.font('Helvetica-Bold').fontSize(11).text('Facturar a');
-        document.font('Helvetica').fontSize(9)
-            .text(invoice.client.name || 'Cliente')
-            .text(invoice.client.ruc ? `RUC / identificación: ${invoice.client.ruc}` : '')
-            .text(invoice.client.address || '')
-            .text(invoice.client.email || '');
+        const issuerWidth = 310;
+        const invoiceX = margin + contentWidth * 0.61;
+        const invoiceWidth = contentWidth * 0.39;
+        const issuerNameHeight = Math.max(20, document.heightOfString(issuer.name || 'Empresa', {
+            width: issuerWidth,
+            font: 'Helvetica-Bold',
+            fontSize: 17,
+            lineGap: 1
+        }));
+        const issuerDetailsHeight = issuerLines.reduce((height, line) => height + document.heightOfString(line, {
+            width: issuerWidth,
+            font: 'Helvetica',
+            fontSize: 8,
+            lineGap: 1
+        }) + 2, 0);
+        const invoiceNumberHeight = document.heightOfString(invoice.number, {
+            width: invoiceWidth,
+            font: 'Helvetica-Bold',
+            fontSize: 13,
+            lineGap: 1
+        });
+        const headerHeight = Math.max(142, 43 + issuerNameHeight + issuerDetailsHeight, 92 + invoiceNumberHeight);
+        document.rect(0, 6, pageWidth, headerHeight).fill(colors.navy);
+        document.fillColor(colors.white).font('Helvetica-Bold').fontSize(17)
+            .text(issuer.name || 'Empresa', margin, 28, {
+                width: issuerWidth,
+                lineGap: 1
+            });
+        let issuerY = 31 + issuerNameHeight;
+        issuerLines.forEach(line => {
+            const lineHeight = document.heightOfString(line, {
+                width: issuerWidth,
+                font: 'Helvetica',
+                fontSize: 8,
+                lineGap: 1
+            });
+            document.fillColor('#cbd5e1').font('Helvetica').fontSize(8)
+                .text(line, margin, issuerY, { width: issuerWidth, lineGap: 1 });
+            issuerY += lineHeight + 2;
+        });
+        document.fillColor('#a7f3d0').font('Helvetica-Bold').fontSize(8)
+            .text('FACTURA COMERCIAL', invoiceX, 29, {
+                width: invoiceWidth,
+                align: 'right'
+            });
+        document.fillColor(colors.white).font('Helvetica-Bold').fontSize(13)
+            .text(invoice.number, invoiceX, 49, {
+                width: invoiceWidth,
+                align: 'right',
+                lineGap: 1
+            });
+        const statusColors = invoice.status === 'Pagada'
+            ? { background: '#064e3b', text: '#a7f3d0' }
+            : invoice.status === 'Anulada'
+                ? { background: '#881337', text: '#fecdd3' }
+                : { background: '#78350f', text: '#fde68a' };
+        const statusWidth = document.widthOfString(invoice.status, {
+            font: 'Helvetica-Bold',
+            fontSize: 8
+        }) + 20;
+        const statusX = pageWidth - margin - statusWidth;
+        document.roundedRect(statusX, headerHeight - 33, statusWidth, 19, 9)
+            .fill(statusColors.background);
+        document.fillColor(statusColors.text).font('Helvetica-Bold').fontSize(8)
+            .text(invoice.status, statusX + 10, headerHeight - 28, { lineBreak: false });
 
-        document.moveDown(1);
+        const drawInfoCard = (x, y, width, title, lines) => {
+            const innerWidth = width - 28;
+            const lineHeights = lines.map(line => document.heightOfString(line, {
+                width: innerWidth,
+                font: 'Helvetica',
+                fontSize: 8.5,
+                lineGap: 2
+            }));
+            const height = 43 + lineHeights.reduce((sum, lineHeight) => sum + lineHeight + 3, 0);
+            document.roundedRect(x, y, width, height, 8)
+                .fillAndStroke(colors.pale, colors.line);
+            document.fillColor(colors.green).font('Helvetica-Bold').fontSize(7.5)
+                .text(title.toUpperCase(), x + 14, y + 12, {
+                    width: innerWidth
+                });
+            let lineY = y + 28;
+            lines.forEach((line, index) => {
+                document.fillColor(index === 0 ? colors.slate : colors.muted)
+                    .font(index === 0 ? 'Helvetica-Bold' : 'Helvetica')
+                    .fontSize(8.5)
+                    .text(line, x + 14, lineY, { width: innerWidth, lineGap: 2 });
+                lineY += lineHeights[index] + 3;
+            });
+            return height;
+        };
+
+        let y = headerHeight + 24;
+        const gap = 12;
+        const cardWidth = (contentWidth - gap) / 2;
+        const clientLines = [
+            invoice.client.name || 'Cliente',
+            invoice.client.ruc ? `RUC / identificación: ${invoice.client.ruc}` : '',
+            invoice.client.address,
+            invoice.client.phone ? `Tel: ${invoice.client.phone}` : '',
+            invoice.client.email
+        ].filter(Boolean);
+        const detailsLines = [
+            `Emisión: ${formatInvoicePdfDate(invoice.date)}`,
+            `Vencimiento: ${formatInvoicePdfDate(invoice.dueDate)}`,
+            invoice.paymentTerms ? `Condición: ${invoice.paymentTerms}` : ''
+        ].filter(Boolean);
+        const detailsHeight = drawInfoCard(margin, y, cardWidth, 'Datos de la factura', detailsLines);
+        const clientHeight = drawInfoCard(
+            margin + cardWidth + gap,
+            y,
+            cardWidth,
+            'Facturar a',
+            clientLines
+        );
+        y += Math.max(detailsHeight, clientHeight) + 25;
+
         const tableX = margin;
-        const quantityWidth = 38;
-        const unitWidth = 74;
-        const taxWidth = 42;
-        const totalWidth = 78;
-        const descriptionWidth = contentWidth - quantityWidth - unitWidth - taxWidth - totalWidth;
+        const quantityWidth = 42;
+        const descriptionWidth = 220;
+        const unitWidth = 82;
+        const taxWidth = 62;
+        const totalWidth = contentWidth - quantityWidth - descriptionWidth - unitWidth - taxWidth;
         const descriptionX = tableX + quantityWidth;
         const unitX = descriptionX + descriptionWidth;
         const taxX = unitX + unitWidth;
         const totalX = taxX + taxWidth;
-        const drawTableHeader = () => {
-            const y = document.y;
-            document.rect(tableX, y, contentWidth, 22).fill('#e2e8f0');
-            document.fillColor('#0f172a').font('Helvetica-Bold').fontSize(8);
-            document.text('Cant.', tableX + 3, y + 7, { width: quantityWidth - 6 });
-            document.text('Descripción', descriptionX + 3, y + 7, { width: descriptionWidth - 6 });
-            document.text('Precio', unitX, y + 7, { width: unitWidth - 4, align: 'right' });
-            document.text('ITBMS', taxX, y + 7, { width: taxWidth - 4, align: 'center' });
-            document.text('Total', totalX, y + 7, { width: totalWidth - 3, align: 'right' });
-            document.y = y + 22;
+        const headerHeightForTable = 27;
+        const rowTextOptions = {
+            width: descriptionWidth - 20,
+            font: 'Helvetica',
+            fontSize: 8.5,
+            lineGap: 2
         };
-        drawTableHeader();
-        invoice.items.forEach(item => {
-            const lineSubtotal = item.qty * item.price;
-            const lineTotal = lineSubtotal * (item.itbms ? 1.07 : 1);
-            const descriptionHeight = document.heightOfString(item.description || 'Servicio', {
-                width: descriptionWidth - 8,
-                font: 'Helvetica',
-                fontSize: 8
+        const drawTableHeader = (tableY, continuation = false) => {
+            document.fillColor(colors.navy).font('Helvetica-Bold').fontSize(10)
+                .text(continuation ? 'Detalle de servicios (continuación)' : 'Detalle de servicios',
+                    tableX, tableY, { lineBreak: false });
+            const headerY = tableY + 20;
+            document.roundedRect(tableX, headerY, contentWidth, headerHeightForTable, 5)
+                .fill('#e2e8f0');
+            document.fillColor(colors.slate).font('Helvetica-Bold').fontSize(7.5);
+            document.text('CANT.', tableX + 8, headerY + 9, { width: quantityWidth - 12 });
+            document.text('DESCRIPCIÓN', descriptionX + 8, headerY + 9, {
+                width: descriptionWidth - 14
             });
-            const rowHeight = Math.max(22, descriptionHeight + 10);
-            if (document.y + rowHeight > document.page.height - margin - 150) {
-                document.addPage();
-                drawTableHeader();
-            }
-            const y = document.y + 5;
-            document.fillColor('#334155').font('Helvetica').fontSize(8);
-            document.text(String(item.qty), tableX + 3, y, { width: quantityWidth - 6 });
-            document.text(item.description || 'Servicio', descriptionX + 3, y, {
-                width: descriptionWidth - 8,
-                height: rowHeight - 5
+            document.text('PRECIO', unitX, headerY + 9, {
+                width: unitWidth - 8,
+                align: 'right'
             });
-            document.text(formatInvoicePdfMoney(item.price), unitX, y, { width: unitWidth - 4, align: 'right' });
-            document.text(item.itbms ? '7%' : 'Exento', taxX, y, { width: taxWidth - 4, align: 'center' });
-            document.text(formatInvoicePdfMoney(lineTotal), totalX, y, { width: totalWidth - 3, align: 'right' });
-            document.moveTo(tableX, document.y + rowHeight).lineTo(tableX + contentWidth, document.y + rowHeight)
-                .strokeColor('#e2e8f0').stroke();
-            document.y += rowHeight;
-        });
+            document.text('ITBMS', taxX, headerY + 9, {
+                width: taxWidth,
+                align: 'center'
+            });
+            document.text('TOTAL', totalX, headerY + 9, {
+                width: totalWidth - 8,
+                align: 'right'
+            });
+            return headerY + headerHeightForTable;
+        };
+        const addContentPage = () => {
+            document.addPage();
+            return drawTableHeader(52, true);
+        };
+        y = drawTableHeader(y);
+        invoice.items.forEach((item, index) => {
+            const description = item.description || 'Servicio';
+            const descriptionHeight = document.heightOfString(description, rowTextOptions);
+            const rowHeight = Math.max(32, descriptionHeight + 14);
+            if (y + rowHeight > bottomLimit) y = addContentPage();
 
-        const totals = [
+            if (index % 2 === 1) {
+                document.rect(tableX, y, contentWidth, rowHeight).fill('#f8fafc');
+            }
+            const textY = y + Math.max(8, (rowHeight - descriptionHeight) / 2);
+            const lineTotal = item.qty * item.price * (item.itbms ? 1.07 : 1);
+            document.fillColor(colors.slate).font('Helvetica').fontSize(8.5);
+            document.text(String(item.qty), tableX + 8, textY, {
+                width: quantityWidth - 12,
+                align: 'center',
+                lineBreak: false
+            });
+            document.text(description, descriptionX + 8, y + 7, rowTextOptions);
+            document.text(formatInvoicePdfMoney(item.price), unitX, textY, {
+                width: unitWidth - 8,
+                align: 'right',
+                lineBreak: false
+            });
+            document.text(item.itbms ? '7%' : 'Exento', taxX, textY, {
+                width: taxWidth,
+                align: 'center',
+                lineBreak: false
+            });
+            document.font('Helvetica-Bold').text(formatInvoicePdfMoney(lineTotal), totalX, textY, {
+                width: totalWidth - 8,
+                align: 'right',
+                lineBreak: false
+            });
+            document.moveTo(tableX, y + rowHeight).lineTo(tableX + contentWidth, y + rowHeight)
+                .strokeColor(colors.line).lineWidth(0.6).stroke();
+            y += rowHeight;
+        });
+        y += 22;
+
+        const paymentInstruction = issuer.paymentDetails?.[invoice.paymentTerms] ||
+            (invoice.paymentTerms === achPaymentMethod ? issuer.achDetails : '') ||
+            '';
+        const auxiliaryLines = [
+            ...(invoice.notes ? [`Notas: ${invoice.notes}`] : []),
+            ...(paymentInstruction ? [`${invoice.paymentTerms}: ${paymentInstruction}`] : [])
+        ];
+        const auxiliaryWidth = 250;
+        const auxiliaryTextHeight = auxiliaryLines.reduce((sum, line) => sum +
+            document.heightOfString(line, {
+                width: auxiliaryWidth - 28,
+                font: 'Helvetica',
+                fontSize: 8.5,
+                lineGap: 2
+            }) + 8, 0);
+        const totalsRows = [
             ['Subtotal', invoice.totals.subtotal],
             ...(invoice.totals.discount > 0 ? [['Descuento', -invoice.totals.discount]] : []),
             ['ITBMS', invoice.totals.itbms]
         ];
-        const totalsHeight = (totals.length + 1) * 18 + 14;
-        if (document.y + totalsHeight > document.page.height - margin) document.addPage();
-        document.moveDown(0.6);
-        const totalsLabelX = margin + contentWidth - 190;
-        totals.forEach(([label, amount]) => {
-            const y = document.y;
-            document.fillColor('#475569').font('Helvetica').fontSize(9)
-                .text(label, totalsLabelX, y, { width: 110 });
-            document.text(formatInvoicePdfMoney(amount), totalsLabelX + 110, y, { width: 80, align: 'right' });
-            document.y = y + 18;
+        const auxiliaryHeight = auxiliaryLines.length ? 48 + auxiliaryTextHeight : 64;
+        const summaryHeight = Math.max(auxiliaryHeight, totalsRows.length * 19 + 55);
+        if (y + summaryHeight > bottomLimit) y = addContentPage() + 14;
+
+        document.roundedRect(margin, y, auxiliaryWidth, summaryHeight, 8)
+            .fillAndStroke(colors.pale, colors.line);
+        document.fillColor(colors.green).font('Helvetica-Bold').fontSize(7.5)
+            .text(auxiliaryLines.length ? 'NOTAS Y PAGO' : 'INFORMACIÓN', margin + 14, y + 13, {
+                width: auxiliaryWidth - 28
+            });
+        if (auxiliaryLines.length) {
+            let auxiliaryY = y + 30;
+            auxiliaryLines.forEach(line => {
+                const lineHeight = document.heightOfString(line, {
+                    width: auxiliaryWidth - 28,
+                    font: 'Helvetica',
+                    fontSize: 8.5,
+                    lineGap: 2
+                });
+                document.fillColor(colors.slate).font('Helvetica').fontSize(8.5)
+                    .text(line, margin + 14, auxiliaryY, {
+                        width: auxiliaryWidth - 28,
+                        lineGap: 2
+                    });
+                auxiliaryY += lineHeight + 8;
+            });
+        } else {
+            document.fillColor(colors.muted).font('Helvetica').fontSize(8.5)
+                .text('Gracias por su preferencia.', margin + 14, y + 32, {
+                    width: auxiliaryWidth - 28
+                });
+        }
+
+        const totalsWidth = 244;
+        const totalsX = pageWidth - margin - totalsWidth;
+        document.roundedRect(totalsX, y, totalsWidth, summaryHeight, 8)
+            .fillAndStroke(colors.white, colors.line);
+        let totalsY = y + 13;
+        totalsRows.forEach(([label, amount]) => {
+            document.fillColor(colors.muted).font('Helvetica').fontSize(8.5)
+                .text(label, totalsX + 14, totalsY, { width: 110 });
+            document.fillColor(colors.slate).font('Helvetica').fontSize(8.5)
+                .text(amount < 0
+                    ? `-${formatInvoicePdfMoney(Math.abs(amount))}`
+                    : formatInvoicePdfMoney(amount), totalsX + 130, totalsY, {
+                    width: totalsWidth - 144,
+                    align: 'right'
+                });
+            totalsY += 19;
         });
-        const totalY = document.y + 3;
-        document.roundedRect(totalsLabelX - 8, totalY, 198, 28, 4).fill('#0f172a');
-        document.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11)
-            .text('TOTAL USD', totalsLabelX, totalY + 8, { width: 100 });
-        document.text(formatInvoicePdfMoney(invoice.totals.grandTotal), totalsLabelX + 100, totalY + 8, {
-            width: 82,
-            align: 'right'
-        });
-        document.y = totalY + 36;
-        if (invoice.notes) {
-            if (document.y + 42 > document.page.height - margin) document.addPage();
-            document.fillColor('#475569').font('Helvetica-Bold').fontSize(9).text('Notas');
-            document.font('Helvetica').fontSize(8).text(invoice.notes, { width: contentWidth });
+        const grandTotalY = y + summaryHeight - 37;
+        document.roundedRect(totalsX + 10, grandTotalY, totalsWidth - 20, 27, 5)
+            .fill(colors.navy);
+        document.fillColor(colors.white).font('Helvetica-Bold').fontSize(9)
+            .text('TOTAL USD', totalsX + 20, grandTotalY + 8, { width: 90 });
+        document.fillColor('#6ee7b7').font('Helvetica-Bold').fontSize(10)
+            .text(formatInvoicePdfMoney(invoice.totals.grandTotal), totalsX + 110, grandTotalY + 7, {
+                width: totalsWidth - 130,
+                align: 'right'
+            });
+
+        const pageRange = document.bufferedPageRange();
+        for (let pageIndex = pageRange.start; pageIndex < pageRange.start + pageRange.count; pageIndex++) {
+            document.switchToPage(pageIndex);
+            document.save();
+            document.moveTo(margin, pageHeight - 72).lineTo(pageWidth - margin, pageHeight - 72)
+                .strokeColor(colors.line).lineWidth(0.7).stroke();
+            document.fillColor(colors.muted).font('Helvetica').fontSize(7.5)
+                .text('Documento comercial · República de Panamá · USD', margin, pageHeight - 60, {
+                    width: contentWidth * 0.7,
+                    lineBreak: false
+                });
+            document.text(`Página ${pageIndex + 1} de ${pageRange.count}`, margin + contentWidth * 0.7,
+                pageHeight - 60, {
+                    width: contentWidth * 0.3,
+                    align: 'right',
+                    lineBreak: false
+                });
+            document.restore();
         }
         document.end();
     });
