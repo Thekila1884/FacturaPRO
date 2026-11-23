@@ -725,7 +725,7 @@
                         <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-600 group-hover:text-white">
                             <i data-lucide="file-signature" class="h-6 w-6"></i>
                         </span>
-                        <span class="block text-lg font-bold text-slate-900">Contratos mensuales</span>
+                        <span class="block text-lg font-bold text-slate-900">Contratos y cobros</span>
                         <span class="mt-2 block text-sm leading-relaxed text-slate-500">Controlar compromisos mensuales, vencimientos y pagos por cliente.</span>
                         <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">Abrir módulo <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
                     </button>
@@ -1004,6 +1004,10 @@
                         <input id="contract-interval-days" type="number" min="1" max="30" step="1" value="30" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <div>
+                        <label for="contract-plan-amount" class="mb-1 block text-xs font-semibold text-slate-700">Monto por período del plan (USD) *</label>
+                        <input id="contract-plan-amount" type="number" min="0.01" max="1000000000" step="0.01" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </div>
+                    <div>
                         <label for="contract-start-date" class="mb-1 block text-xs font-semibold text-slate-700">Fecha de inicio del contrato *</label>
                         <input id="contract-start-date" type="date" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
@@ -1012,6 +1016,7 @@
                         <input id="contract-end-date" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <div class="sm:col-span-2 lg:col-span-3">
+                        <p class="mb-3 text-xs text-slate-500">El monto del plan se aplica automáticamente a los nuevos períodos. Puedes cambiarlo después; los cobros que ya tengan un monto guardado no se modifican.</p>
                         <label for="contract-notes" class="mb-1 block text-xs font-semibold text-slate-700">Notas</label>
                         <textarea id="contract-notes" rows="2" maxlength="1000" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
                     </div>
@@ -1038,7 +1043,7 @@
                         <tbody id="contracts-tbody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
-                <p id="contracts-empty" class="hidden p-8 text-center text-sm text-slate-500">Aún no hay contratos mensuales guardados.</p>
+                <p id="contracts-empty" class="hidden p-8 text-center text-sm text-slate-500">Aún no hay contratos guardados.</p>
             </section>
         </section>
 
@@ -3608,7 +3613,7 @@
                         contract,
                         clientName: getContractClientName(contract),
                         dueDate: nextChargeDate,
-                        amount: null,
+                        amount: Number(contract.defaultChargeAmount ?? contract.monthlyAmount) || null,
                         paidAt: '',
                         charge: null,
                         isCurrent: true,
@@ -3688,6 +3693,7 @@
             document.getElementById('contract-form-cancel').classList.add('hidden');
             document.getElementById('contract-interval-days').value = '30';
             document.getElementById('contract-interval-days').disabled = false;
+            document.getElementById('contract-plan-amount').value = '';
             document.getElementById('contract-start-date').value = getTodayISO();
             document.getElementById('contract-end-date').value = '';
             renderContractClientSelect('');
@@ -3789,7 +3795,7 @@
                     const saveAmountButton = document.createElement('button');
                     saveAmountButton.type = 'button';
                     saveAmountButton.className = 'rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50';
-                    saveAmountButton.textContent = charge ? 'Actualizar monto' : 'Definir monto';
+                    saveAmountButton.textContent = charge ? 'Actualizar monto' : hasAmount ? 'Cambiar monto' : 'Definir monto';
                     saveAmountButton.addEventListener('click', () =>
                         saveContractChargeAmount(contract.id, dueDate, chargeAmountInput.value, saveAmountButton)
                     );
@@ -3943,6 +3949,9 @@
                 ['Dirección', client.address],
                 ['Servicio / concepto', contract.description],
                 ['Intervalo de cobro', `Cada ${contract.billingIntervalDays || 30} días`],
+                ['Monto por período', contract.defaultChargeAmount
+                    ? formatUSD(contract.defaultChargeAmount)
+                    : 'Por definir'],
                 ['Fecha de inicio', formatDateReadable(contract.startDate || `${contract.startMonth}-01`)],
                 ['Fecha de finalización', contract.endDate ? formatDateReadable(contract.endDate) : 'Indefinida'],
                 ['Estado', getContractCollectionState(contract).label],
@@ -3994,7 +4003,9 @@
 
                 const planCell = document.createElement('td');
                 planCell.className = 'px-4 py-3 whitespace-nowrap text-slate-600';
-                planCell.textContent = `Cada ${contract.billingIntervalDays || 30} días`;
+                planCell.textContent = `Cada ${contract.billingIntervalDays || 30} días · ${
+                    contract.defaultChargeAmount ? formatUSD(contract.defaultChargeAmount) : 'Monto pendiente'
+                }`;
                 const termCell = document.createElement('td');
                 termCell.className = 'px-4 py-3 whitespace-nowrap text-slate-600';
                 termCell.textContent = `${formatDateReadable(contract.startDate || `${contract.startMonth}-01`)} – ${contract.endDate ? formatDateReadable(contract.endDate) : 'Indefinido'}`;
@@ -4055,6 +4066,8 @@
             document.getElementById('contract-description').value = contract.description;
             document.getElementById('contract-interval-days').value = String(contract.billingIntervalDays || 30);
             document.getElementById('contract-interval-days').disabled = Boolean(contract.collectionStartedAt);
+            document.getElementById('contract-plan-amount').value =
+                contract.defaultChargeAmount ?? contract.monthlyAmount ?? '';
             document.getElementById('contract-start-date').value = contract.startDate || `${contract.startMonth}-01`;
             document.getElementById('contract-end-date').value = contract.endDate || '';
             document.getElementById('contract-notes').value = contract.notes || '';
@@ -4074,6 +4087,7 @@
                 clientId: document.getElementById('contract-client-id').value,
                 description: document.getElementById('contract-description').value.trim(),
                 billingIntervalDays: Number(document.getElementById('contract-interval-days').value),
+                defaultChargeAmount: Number(document.getElementById('contract-plan-amount').value),
                 startDate: document.getElementById('contract-start-date').value,
                 endDate: document.getElementById('contract-end-date').value,
                 notes: document.getElementById('contract-notes').value.trim()

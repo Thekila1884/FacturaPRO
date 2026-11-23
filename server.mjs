@@ -432,6 +432,20 @@ function validateContract(input, client, existing = null) {
         billingIntervalDays !== Number(existing.billingIntervalDays || 30)) {
         fail('No se puede cambiar el intervalo de cobro después de iniciar el seguimiento.');
     }
+    let defaultChargeAmount = existing?.defaultChargeAmount ?? existing?.monthlyAmount ?? null;
+    if (Object.hasOwn(input, 'defaultChargeAmount')) {
+        const rawAmount = input.defaultChargeAmount;
+        const amount = typeof rawAmount === 'number' ||
+            (typeof rawAmount === 'string' && rawAmount.trim() !== '')
+            ? Number(rawAmount)
+            : Number.NaN;
+        const roundedAmount = Math.round(amount * 100) / 100;
+        if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000 ||
+            Math.abs(amount - roundedAmount) > 1e-8) {
+            fail('El monto del plan debe ser mayor que cero y tener hasta dos decimales.');
+        }
+        defaultChargeAmount = roundedAmount;
+    }
     let monthlyAmount = existing?.monthlyAmount ?? null;
     if (Object.hasOwn(input, 'monthlyAmount')) {
         if (input.monthlyAmount === null || input.monthlyAmount === '') {
@@ -445,6 +459,12 @@ function validateContract(input, client, existing = null) {
             }
             monthlyAmount = rounded;
         }
+    }
+    if (defaultChargeAmount === null && monthlyAmount !== null) {
+        defaultChargeAmount = monthlyAmount;
+    }
+    if (!existing && defaultChargeAmount === null) {
+        fail('Define el monto por período del plan.');
     }
     const notes = input.notes ?? '';
     if (typeof notes !== 'string' || notes.length > 1000) {
@@ -464,6 +484,7 @@ function validateContract(input, client, existing = null) {
         clientEmail: client?.email ?? existing?.clientEmail ?? '',
         clientAddress: client?.address ?? existing?.clientAddress ?? '',
         description,
+        defaultChargeAmount,
         monthlyAmount,
         dueDay: existing?.dueDay || 1,
         startDate,
@@ -742,6 +763,7 @@ async function getContractDetails(contract) {
         endDate: getContractEndDate(contract),
         collectionStartedAt: getContractActivationDate(contract),
         billingIntervalDays: contract.billingIntervalDays || 30,
+        defaultChargeAmount: contract.defaultChargeAmount ?? contract.monthlyAmount ?? null,
         payments: payments.map(({ month, paidAt }) => ({ month, paidAt })),
         charges: charges.map(({ dueDate, amount, paidAt }) => ({ dueDate, amount, paidAt })),
         nextChargeDate: getNextChargeDueDate(contract, charges)
@@ -780,6 +802,7 @@ async function listContracts() {
             endDate: getContractEndDate(contract),
             collectionStartedAt: getContractActivationDate(contract),
             billingIntervalDays: contract.billingIntervalDays || 30,
+            defaultChargeAmount: contract.defaultChargeAmount ?? contract.monthlyAmount ?? null,
             payments: (paymentsByContract.get(id) || []).sort((a, b) => a.month.localeCompare(b.month)),
             charges: (chargesByContract.get(id) || []).sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
             nextChargeDate: getNextChargeDueDate(contract, chargesByContract.get(id) || [])
@@ -1061,11 +1084,6 @@ async function handleApi(request, response, url) {
         const charges = await getContractCharges(id);
         const nextChargeDate = getNextChargeDueDate(contract, charges);
         const existingCharge = charges.find(charge => charge.dueDate === dueDate);
-        if (!existingCharge) {
-            return jsonResponse(response, 409, {
-                error: method === 'PUT' ? 'Primero define el monto de este cobro.' : 'No se encontró el período de cobro.'
-            });
-        }
         if (method === 'PUT') {
             if (dueDate !== nextChargeDate) {
                 return jsonResponse(response, 409, { error: 'Este ya no es el período de cobro pendiente.' });
@@ -1076,14 +1094,22 @@ async function handleApi(request, response, url) {
             if (paidAt < activationDate || paidAt > today) {
                 return jsonResponse(response, 400, { error: 'La fecha de pago debe estar entre el inicio del cobro y hoy.' });
             }
-            if (existingCharge.paidAt) {
+            if (existingCharge?.paidAt) {
                 return jsonResponse(response, 409, { error: 'Este cobro ya está pagado.' });
             }
-            await saveContractCharge(id, dueDate, existingCharge.amount, paidAt);
+            const amount = existingCharge?.amount ??
+                Number(contract.defaultChargeAmount ?? contract.monthlyAmount);
+            if (!Number.isFinite(amount) || amount <= 0) {
+                return jsonResponse(response, 409, { error: 'Primero define el monto de este cobro.' });
+            }
+            await saveContractCharge(id, dueDate, amount, paidAt);
             return jsonResponse(response, 200, {
-                charge: { dueDate, amount: existingCharge.amount, paidAt },
+                charge: { dueDate, amount, paidAt },
                 contract: await getContractDetails({ ...contract, id })
             });
+        }
+        if (!existingCharge) {
+            return jsonResponse(response, 409, { error: 'No se encontró el período de cobro.' });
         }
         const latestPaidCharge = charges
             .filter(charge => charge.paidAt)

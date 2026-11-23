@@ -118,6 +118,7 @@ test('recurring contract view renders its next period and amount controls', () =
         clientName: 'Cliente',
         description: 'Soporte',
         billingIntervalDays: 5,
+        defaultChargeAmount: 125,
         startDate: '${today}',
         endDate: '',
         collectionStartedAt: '${today}',
@@ -126,12 +127,13 @@ test('recurring contract view renders its next period and amount controls', () =
     }]; renderContractPayments('${dueDate.slice(0, 7)}')`, context);
 
     assert.equal(elements['contract-month-count'].textContent, '1');
-    assert.equal(elements['contract-month-expected'].textContent, '$0.00');
+    assert.equal(elements['contract-month-expected'].textContent, '$125.00');
     const row = elements['contract-payments-tbody'].children[0];
     assert.equal(row.children[1].textContent, dueDate.split('-').reverse().join('/'));
-    assert.match(row.children[2].children[0].value, /^$/);
+    assert.equal(row.children[2].children[0].value, '125');
     const actionGroup = row.children[4].children[0];
-    assert.equal(actionGroup.children[0].textContent, 'Definir monto');
+    assert.equal(actionGroup.children[0].textContent, 'Cambiar monto');
+    assert.equal(actionGroup.children[2].textContent, 'Registrar pago');
 });
 
 test('contract next charge uses the configured interval after payment', () => {

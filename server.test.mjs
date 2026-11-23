@@ -371,10 +371,16 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         clientId: 'client-1',
         description: 'Soporte técnico',
         billingIntervalDays: 5,
+        defaultChargeAmount: 100.5,
         startDate: today,
         endDate: '',
         notes: 'Atención remota'
     };
+    await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, defaultChargeAmount: 0 },
+        expected: 400
+    });
     const createdContract = (await api('/api/contracts', {
         method: 'PUT',
         body: newContract,
@@ -382,6 +388,7 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     })).contract;
     assert.equal(createdContract.clientName, updatedClient.name);
     assert.equal(createdContract.billingIntervalDays, 5);
+    assert.equal(createdContract.defaultChargeAmount, 100.5);
     assert.equal(createdContract.startDate, today);
     assert.deepEqual(createdContract.payments, []);
     assert.deepEqual((await api('/api/contracts')).contracts.map(({ id }) => id), [createdContract.id]);
@@ -429,6 +436,13 @@ test('admin authentication protects Supabase-backed invoice operations', async (
         body: { ...newContract, id: createdContract.id, billingIntervalDays: 6 },
         expected: 400
     });
+    await api('/api/contracts', {
+        method: 'PUT',
+        body: { ...newContract, id: createdContract.id, defaultChargeAmount: 200.75 }
+    });
+    const updatedPlan = (await api('/api/contracts')).contracts[0];
+    assert.equal(updatedPlan.defaultChargeAmount, 200.75);
+    assert.equal(updatedPlan.charges[0].amount, 125.5);
     await api(paymentPath, { method: 'DELETE' });
     const reversedContract = (await api('/api/contracts')).contracts[0];
     assert.equal(reversedContract.charges[0].paidAt, '');
@@ -441,16 +455,12 @@ test('admin authentication protects Supabase-backed invoice operations', async (
 
     const earlyPaymentContract = (await api('/api/contracts', {
         method: 'PUT',
-        body: { ...newContract, clientId: 'client-2', description: 'Pago anticipado' },
+        body: { ...newContract, clientId: 'client-2', description: 'Pago anticipado', defaultChargeAmount: 50 },
         expected: 201
     })).contract;
     const earlyPaymentPath = `/api/contracts/${earlyPaymentContract.id}`;
     await api(`${earlyPaymentPath}/collection/start`, { method: 'POST' });
     const futureDueDate = addDays(today, 5);
-    await api(`${earlyPaymentPath}/charges/${futureDueDate}`, {
-        method: 'PUT',
-        body: { amount: 50 }
-    });
     await api(`${earlyPaymentPath}/charges/${futureDueDate}/payment`, {
         method: 'PUT',
         body: { paidAt: today }
@@ -458,6 +468,7 @@ test('admin authentication protects Supabase-backed invoice operations', async (
     const earlyPaidContract = (await api('/api/contracts')).contracts
         .find(contract => contract.id === earlyPaymentContract.id);
     assert.equal(earlyPaidContract.nextChargeDate, addDays(futureDueDate, 5));
+    assert.equal(earlyPaidContract.charges[0].amount, 50);
     await api(earlyPaymentPath, { method: 'DELETE' });
 
     await api('/api/clients/client-1', { method: 'DELETE' });
